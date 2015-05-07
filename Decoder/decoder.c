@@ -58,6 +58,8 @@
 #define  PGMNAME PGMPREFIX "d"
 #define  EPGMNAME PGMPREFIX "e"
 
+void usage();
+
 static char *banner="\n\
 =============================================\n\
 SPMG/JPEG-LS DECOMPRESSOR " JPEGLSVERSION "\n\
@@ -124,7 +126,7 @@ int     highmask;
 
 
 /* Write one row of pixel values */
-inline void write_one_line(pixel* line, int cols, FILE* outfile)
+__inline void write_one_line(pixel* line, int cols, FILE* outfile)
 {
 
 	int i, index;
@@ -871,7 +873,8 @@ int main (int argc, char *argv[]) {
 		tot_out = 0;
 	pixel *local_scanl0,*local_scanl1,*local_pscanline,*local_cscanline;
 	int MCUs_counted;
-	
+	msgfile = stdout;
+
 	
 	/* Parse the parameters, initialize */
 	/* Not yet fully implemented */
@@ -1474,7 +1477,7 @@ int main (int argc, char *argv[]) {
 
 
 
-usage()
+void usage()
 {
 	fprintf(stderr,"Usage: %s [flags] [infile] [outfile1 [outfile2, ...]]\n\
 DEFAULTS:\n\
@@ -1500,7 +1503,7 @@ outfile2, ... : Multiple output specification for plane or line int. mode.\n\
 }
 
 
-bad_flag(char *s)
+void bad_flag(char *s)
 {
     fprintf(stderr,"Bad flag %s\n",s);
     usage();

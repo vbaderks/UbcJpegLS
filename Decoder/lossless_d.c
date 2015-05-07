@@ -61,7 +61,7 @@
 static int eor_limit;
 
 /* Do Golomb-Rice statistics and DECODING for LOSSLESS images */
-inline int lossless_regular_mode_d(int Q, int SIGN, int Px)
+__inline int lossless_regular_mode_d(int Q, int SIGN, int Px)
 {
 	int At, Bt, Nt, Errval, absErrval;
 	int current, k;
@@ -206,7 +206,7 @@ inline int lossless_regular_mode_d(int Q, int SIGN, int Px)
 
 
 /* Do end of run DECODING for LOSSLESS images */
-inline pixel lossless_end_of_run_d(pixel Ra, pixel Rb, int RItype)
+__inline pixel lossless_end_of_run_d(pixel Ra, pixel Rb, int RItype)
 {
 
 	int Ix,

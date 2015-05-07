@@ -95,7 +95,7 @@ extern char	*plane_int_string,
 			*pixel_int_string;
 
 
-#define BIG_ENDIAN	1
+//#define BIG_ENDIAN	1
 
 typedef struct	jpeg_ls {
 
