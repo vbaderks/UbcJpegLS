@@ -1,0 +1,30 @@
+# GIT ignore file for UBcJpegLS
+
+obj/
+bin/
+Win32/
+x64/
+.vscode/
+[Dd]ebug/
+[Rr]elease/
+[Cc]hecked/
+*.opensdf
+*.sdf
+
+# Ignore files created by Visual Studio
+*.suo
+*.user
+*.ipch
+*.opendb
+*.db
+*.aps
+
+# NuGet Packages
+*.nupkg
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
+
+# Ignore Coverity build folder
+cov-int/
