@@ -55,96 +55,90 @@
 #include "global.h"
 #include "bitio.h"
 
-#define MELCSTATES	32	/* number of melcode states */
+#define MELCSTATES  32  /* number of melcode states */
 
-static J[MELCSTATES] = {
-	0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,5,5,6,6,7,
-	7,8,9,10,11,12,13,14,15 
+static int J[MELCSTATES] = {
+    0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,5,5,6,6,7,
+    7,8,9,10,11,12,13,14,15 
 };
 
 
-static int	melcstate[MAX_COMPONENTS],    /* index to the state array */
-		melclen[MAX_COMPONENTS];      /* contents of the state array location
-         					 indexed by melcstate: the "expected"
-						 run length is 2^melclen, shorter runs are
-						 encoded by a 1 followed by the run length
-						 in binary representation, wit a fixed length
-						 of melclen bits */
+static int melcstate[MAX_COMPONENTS];    /* index to the state array */
+static int melclen[MAX_COMPONENTS];      /* contents of the state array location
+                                            indexed by melcstate: the "expected"
+                                            run length is 2^melclen, shorter runs are
+                                            encoded by a 1 followed by the run length
+                                            in binary representation, wit a fixed length
+                                            of melclen bits */
 
 static unsigned long melcorder[MAX_COMPONENTS];  /* 2^ melclen */
 
 
-void init_process_run(int maxrun)    /* maxrun is ignoreed when using MELCODE,
-					kept here for function compatibility */				    
+void init_process_run()
 {
-	int	n_c;
-
-	for (n_c=0;n_c<components;n_c++)
-	{
-		melcstate[n_c] = 0;
-		melclen[n_c] = J[0];
-		melcorder[n_c] = 1<<melclen[n_c];
-	}
+    for (int n_c = 0; n_c < components; n_c++)
+    {
+        melcstate[n_c] = 0;
+        melclen[n_c] = J[0];
+        melcorder[n_c] = 1<<melclen[n_c];
+    }
 }
 
 
-
-
 /* decoding routine: reads bits from the input and returns a run length. */
-/* argument is the number of pixels left to	end-of-line (bound on run length) */
+/* argument is the number of pixels left to end-of-line (bound on run length) */
 int process_run_dec(int lineleft, int color)  
 {
-	int runlen = 0;
-		
-	do {
-		register temp, hits;
-		temp = zeroLUT[(byte)(~(reg >> 24))];   /* number of leading ones in the
-							   input stream, up to 8 */
-		for ( hits = 1; hits<=temp; hits++ ) 
-		{
-			runlen += melcorder[color];
-			if ( runlen >= lineleft )
-			{ /* reached end-of-line */
-				if ( runlen==lineleft && melcstate[color] < MELCSTATES ) 
-				{
-					melclen[color] = J[++melcstate[color]];
-					melcorder[color] = (1L<<melclen[color]);
-				}
-				FILLBUFFER(hits); /* actual # of 1's consumed */
-				return lineleft; 
-			}
-			if ( melcstate[color] < MELCSTATES ) 
-			{
-				melclen[color] = J[++melcstate[color]];
-				melcorder[color] = (1L<<melclen[color]);
-			}
-		}	
-		if (temp != 8) 
-		{
-			FILLBUFFER(temp + 1);  /* consume the leading
-						  0 of the remainder encoding */
-			break;
+    int runlen = 0;
+        
+    do {
+        int temp = zeroLUT[(byte)(~(reg >> 24))];   /* number of leading ones in the
+                               input stream, up to 8 */
+        for (int hits = 1; hits<=temp; hits++ ) 
+        {
+            runlen += melcorder[color];
+            if ( runlen >= lineleft )
+            { /* reached end-of-line */
+                if ( runlen==lineleft && melcstate[color] < MELCSTATES ) 
+                {
+                    melclen[color] = J[++melcstate[color]];
+                    melcorder[color] = (1L<<melclen[color]);
+                }
+                FILLBUFFER(hits); /* actual # of 1's consumed */
+                return lineleft; 
+            }
+            if ( melcstate[color] < MELCSTATES ) 
+            {
+                melclen[color] = J[++melcstate[color]];
+                melcorder[color] = (1L<<melclen[color]);
+            }
+        }   
+        if (temp != 8) 
+        {
+            FILLBUFFER(temp + 1);  /* consume the leading
+                          0 of the remainder encoding */
+            break;
         }
         FILLBUFFER(8);
-	} while ( 1 );
+    } while ( 1 );
 
-	/* read the length of the remainder */
-	if ( melclen[color] ) 
-	{
-		register temp;
-		GETBITS(temp, melclen[color]);  /*** GETBITS is a macro, not a function */
-		runlen += temp;
-	}
-	limit_reduce = melclen[color]+1;
+    /* read the length of the remainder */
+    if ( melclen[color] ) 
+    {
+        int temp;
+        GETBITS(temp, melclen[color]);  /*** GETBITS is a macro, not a function */
+        runlen += temp;
+    }
+    limit_reduce = melclen[color]+1;
 
-	/* adjust melcoder parameters */
-	if ( melcstate[color] ) 
-	{
-		melclen[color] = J[--melcstate[color]];
-		melcorder[color] = (1L<<melclen[color]);
-	}
+    /* adjust melcoder parameters */
+    if ( melcstate[color] ) 
+    {
+        melclen[color] = J[--melcstate[color]];
+        melcorder[color] = (1L<<melclen[color]);
+    }
 
-	return runlen;
+    return runlen;
 }
 
 

@@ -63,128 +63,126 @@ int vLUT[3][2 * LUTMAX16];
 
 int classmap[CONTEXTS1];
 
-int	*qdiv0, *qdiv,        /* quantization table (division via look-up) */
-	*qmul0, *qmul;        /* dequantization table */
+int *qdiv0, *qdiv,        /* quantization table (division via look-up) */
+    *qmul0, *qmul;        /* dequantization table */
 
 int N[TOT_CONTEXTS], 
     A[TOT_CONTEXTS], 
     B[TOT_CONTEXTS],
-	C[TOT_CONTEXTS];
+    C[TOT_CONTEXTS];
 
 
 
 /* Setup Look Up Tables for quantized gradient merging */
 void prepareLUTs()
 {
-	int i, j, idx, lmax;
-	byte k;
+    int i, j, idx, lmax;
 
-	lmax = min(alpha,lutmax);
-	
-	/* implementation limitation: */
-	if ( T3 > lmax-1 ) {
-		fprintf(stderr,"Sorry, current implementation does not support threshold T3 > %d, got %d\n",lmax-1,T3);
-		exit(10);
-	}
+    lmax = min(alpha,lutmax);
+    
+    /* implementation limitation: */
+    if ( T3 > lmax-1 ) {
+        fprintf(stderr,"Sorry, current implementation does not support threshold T3 > %d, got %d\n",lmax-1,T3);
+        exit(10);
+    }
 
+    /* Build classification tables (lossless or lossy) */
+    
+    if (lossy==FALSE) {
 
-	/* Build classification tables (lossless or lossy) */
-	
-	if (lossy==FALSE) {
+        for (i = -lmax + 1; i < lmax; i++) {
 
-		for (i = -lmax + 1; i < lmax; i++) {
+            if  ( i <= -T3 )        /* ...... -T3  */
+                idx = 7;
+            else if ( i <= -T2 )    /* -(T3-1) ... -T2 */
+                idx = 5;
+            else if ( i <= -T1 )    /* -(T2-1) ... -T1 */
+                idx = 3;
 
-			if  ( i <= -T3 )        /* ...... -T3  */
-				idx = 7;
-			else if ( i <= -T2 )    /* -(T3-1) ... -T2 */
-				idx = 5;
-			else if ( i <= -T1 )    /* -(T2-1) ... -T1 */
-				idx = 3;
+            else if ( i <= -1 )     /* -(T1-1) ...  -1 */
+                idx = 1;
+            else if ( i == 0 )      /*  just 0 */
+                idx = 0;
 
-			else if ( i <= -1 )     /* -(T1-1) ...  -1 */
-				idx = 1;
-			else if ( i == 0 )      /*  just 0 */
-				idx = 0;
+            else if ( i < T1 )      /* 1 ... T1-1 */
+                idx = 2;
+            else if ( i < T2 )      /* T1 ... T2-1 */
+                idx = 4;
+            else if ( i < T3 )      /* T2 ... T3-1 */
+                idx = 6;
+            else                    /* T3 ... */
+                idx = 8;
 
-			else if ( i < T1 )      /* 1 ... T1-1 */
-				idx = 2;
-			else if ( i < T2 )      /* T1 ... T2-1 */
-				idx = 4;
-			else if ( i < T3 )      /* T2 ... T3-1 */
-				idx = 6;
-			else                    /* T3 ... */
-				idx = 8;
+            vLUT[0][i + lutmax] = CREGIONS * CREGIONS * idx;
+            vLUT[1][i + lutmax] = CREGIONS * idx;
+            vLUT[2][i + lutmax] = idx;
+        }
 
-			vLUT[0][i + lutmax] = CREGIONS * CREGIONS * idx;
-			vLUT[1][i + lutmax] = CREGIONS * idx;
-			vLUT[2][i + lutmax] = idx;
-		}
+    } else {
 
-	} else {
+        for (i = -lmax + 1; i < lmax; i++) {
 
-		for (i = -lmax + 1; i < lmax; i++) {
+            if ( NEAR >= (alpha-1) )
+                idx = 0;   /* degenerate case, regardless of thresholds */
+            else
 
-			if ( NEAR >= (alpha-1) )
-				idx = 0;   /* degenerate case, regardless of thresholds */
-			else
+                if  ( i <= -T3 )        /* ...... -T3  */
+                    idx = 7;
+                else if ( i <= -T2 )    /* -(T3-1) ... -T2 */
+                    idx = 5;
+                else if ( i <= -T1 )    /* -(T2-1) ... -T1 */
+                    idx = 3;
 
-				if  ( i <= -T3 )        /* ...... -T3  */
-					idx = 7;
-				else if ( i <= -T2 )    /* -(T3-1) ... -T2 */
-					idx = 5;
-				else if ( i <= -T1 )    /* -(T2-1) ... -T1 */
-					idx = 3;
+                else if ( i <= -NEAR-1 )     /* -(T1-1) ...  -NEAR-1 */
+                    idx = 1;
+                else if ( i <= NEAR )      /*  within NEAR of 0 */
+                    idx = 0;
 
-				else if ( i <= -NEAR-1 )     /* -(T1-1) ...  -NEAR-1 */
-					idx = 1;
-				else if ( i <= NEAR )      /*  within NEAR of 0 */
-					idx = 0;
+                else if ( i < T1 )      /* 1 ... T1-1 */
+                    idx = 2;
+                else if ( i < T2 )      /* T1 ... T2-1 */
+                    idx = 4;
+                else if ( i < T3 )      /* T2 ... T3-1 */
+                    idx = 6;
+                else                    /* T3 ... */
+                    idx = 8;
 
-				else if ( i < T1 )      /* 1 ... T1-1 */
-					idx = 2;
-				else if ( i < T2 )      /* T1 ... T2-1 */
-					idx = 4;
-				else if ( i < T3 )      /* T2 ... T3-1 */
-					idx = 6;
-				else                    /* T3 ... */
-					idx = 8;
+            vLUT[0][i + lutmax] = CREGIONS * CREGIONS * idx;
+            vLUT[1][i + lutmax] = CREGIONS * idx;
+            vLUT[2][i + lutmax] = idx;
+        }
 
-			vLUT[0][i + lutmax] = CREGIONS * CREGIONS * idx;
-			vLUT[1][i + lutmax] = CREGIONS * idx;
-			vLUT[2][i + lutmax] = idx;
-		}
-
-	}
+    }
 
 
-	/*  prepare context mapping table (symmetric context merging) */
-	classmap[0] = 0;
-	for ( i=1, j=0; i<CONTEXTS1; i++) {
-	    int q1, q2, q3, n1=0, n2=0, n3=0, ineg, sgn;
+    /*  prepare context mapping table (symmetric context merging) */
+    classmap[0] = 0;
+    for ( i=1, j=0; i<CONTEXTS1; i++) {
+        int q1, q2, q3, n1=0, n2=0, n3=0, ineg, sgn;
 
-	    if(classmap[i])
-			continue;
+        if(classmap[i])
+            continue;
 
-	    q1 = i/(CREGIONS*CREGIONS);		/* first digit */
-	    q2 = (i/CREGIONS)%CREGIONS;		/* second digit */
-    	q3 = i%CREGIONS;    			/* third digit */
+        q1 = i/(CREGIONS*CREGIONS);     /* first digit */
+        q2 = (i/CREGIONS)%CREGIONS;     /* second digit */
+        q3 = i%CREGIONS;                /* third digit */
 
-	    if((q1%2)||(q1==0 && (q2%2))||(q1==0 && q2==0 && (q3%2)))
-			sgn = -1;
-	    else
-			sgn = 1;
+        if((q1%2)||(q1==0 && (q2%2))||(q1==0 && q2==0 && (q3%2)))
+            sgn = -1;
+        else
+            sgn = 1;
 
-	    /* compute negative context */
-    	if(q1) n1 = q1 + ((q1%2) ? 1 : -1);
-	    if(q2) n2 = q2 + ((q2%2) ? 1 : -1);
-	    if(q3) n3 = q3 + ((q3%2) ? 1 : -1);
+        /* compute negative context */
+        if(q1) n1 = q1 + ((q1%2) ? 1 : -1);
+        if(q2) n2 = q2 + ((q2%2) ? 1 : -1);
+        if(q3) n3 = q3 + ((q3%2) ? 1 : -1);
 
-	    ineg = (n1*CREGIONS+n2)*CREGIONS+n3;
-	    j++ ;    /* next class number */
-	    classmap[i] = sgn*j;
-	    classmap[ineg] = -sgn*j;
+        ineg = (n1*CREGIONS+n2)*CREGIONS+n3;
+        j++ ;    /* next class number */
+        classmap[i] = sgn*j;
+        classmap[ineg] = -sgn*j;
 
-	}
+    }
 
 }
 
@@ -203,27 +201,27 @@ void prepare_qtables(int absize, int NEAR)
     beta = absize;
 
     if ( (qdiv0 = (int *)calloc(2*absize-1,sizeof(int)))==NULL ) {
-	    perror("qdiv  table");
-	    exit(10);
+        perror("qdiv  table");
+        exit(10);
     }
     qdiv = qdiv0+absize-1;
 
     if ( (qmul0 = (int *)calloc(2*beta-1,sizeof(int)))==NULL ) {
-	    perror("qmul  table");
-	    exit(10);
+        perror("qmul  table");
+        exit(10);
     }
     qmul = qmul0+beta-1;
 
     for ( diff = -(absize-1); diff<absize; diff++ ) {
-	    if ( diff<0 )
-		    qdiff = - ( (NEAR-diff)/quant );
-	    else
-		    qdiff = ( NEAR + diff )/quant;
-	    qdiv[diff] = qdiff;
+        if ( diff<0 )
+            qdiff = - ( (NEAR-diff)/quant );
+        else
+            qdiff = ( NEAR + diff )/quant;
+        qdiv[diff] = qdiff;
     }
     for ( qdiff = -(beta-1); qdiff<beta; qdiff++ ) {
-	    diff = quant*qdiff;
-	    qmul[qdiff] = diff;
+        diff = quant*qdiff;
+        qmul[qdiff] = diff;
     }
 }
 
@@ -234,18 +232,18 @@ void prepare_qtables(int absize, int NEAR)
 void init_stats(int absize) 
 {
 
-	int i, initabstat, slack;
+    int i, initabstat, slack;
 
-	slack = 1<<INITABSLACK;
-	initabstat = (absize + slack/2)/slack;
-	if ( initabstat < MIN_INITABSTAT ) initabstat = MIN_INITABSTAT;
+    slack = 1<<INITABSLACK;
+    initabstat = (absize + slack/2)/slack;
+    if ( initabstat < MIN_INITABSTAT ) initabstat = MIN_INITABSTAT;
 
-	/* do the statistics initialization */
-	for (i = 0; i < TOT_CONTEXTS; ++i) {
-		C[i]= B[i] = 0;
-		N[i] = INITNSTAT;
-		A[i] = initabstat;
-	}
+    /* do the statistics initialization */
+    for (i = 0; i < TOT_CONTEXTS; ++i) {
+        C[i]= B[i] = 0;
+        N[i] = INITNSTAT;
+        A[i] = initabstat;
+    }
 }
 
 

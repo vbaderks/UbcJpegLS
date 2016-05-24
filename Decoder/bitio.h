@@ -80,7 +80,7 @@ extern FILE *in, *out;
 #define myfeof(fil) ((fp >= truebufsize) && feof(fil))
 
 
-extern void bufiinit(FILE *fil);
+extern void bufiinit();
 
 extern byte fillinbuff(FILE *fil);
 

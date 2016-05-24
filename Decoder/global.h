@@ -52,13 +52,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 
 #ifndef GLOBAL_H
 #define GLOBAL_H
-
-#ifndef CLOCKS_PER_SEC
-#define CLOCKS_PER_SEC 10e6
-#endif
 
 /*#define NDEBUG*/
 #define POW2
@@ -350,7 +347,7 @@ void createzeroLUT();
 void buffinit(FILE *);
 
 /*  melcode.c */
-void init_process_run(int);
+void init_process_run();
 void close_process_run();
 int  process_run_dec(int,int);
 

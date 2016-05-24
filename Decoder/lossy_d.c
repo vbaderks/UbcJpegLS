@@ -62,754 +62,740 @@ static int eor_limit;
 /* Do Golomb-Rice statistics and DECODING for LOSSY images*/
 __inline int lossy_regular_mode_d(int Q, int SIGN, int Px)
 {
-	int At, Bt, Nt, Errval, absErrval;
-	int current, k;
+    int At, Bt, Nt, Errval, absErrval;
+    int current, k;
 
-	/* This function is called only for regular contexts. 
-	   End_of_run context is treated separately */
+    /* This function is called only for regular contexts. 
+       End_of_run context is treated separately */
 
-	Nt = N[Q];
-	At = A[Q];
-	/* Estimate k */
-	{
-	    register nst = Nt;
-	    for(k=0; nst < At; nst *=2, k++);
-	}
-	
-	/* Get the number of leading zeros */
-	absErrval = 0;
-	do {
-		int temp;
+    Nt = N[Q];
+    At = A[Q];
+    /* Estimate k */
+    {
+        int nst = Nt;
+        for(k =0 ; nst < At; nst *= 2, k++);
+    }
 
-		temp = zeroLUT[reg >> 24];
-		absErrval += temp;
-		if (temp != 8) {
-			FILLBUFFER(temp + 1);
-			break;
-		}
-		FILLBUFFER(8);
-	} while (1);
+    /* Get the number of leading zeros */
+    absErrval = 0;
+    do {
+        int temp;
 
-	if ( absErrval < limit ) {
-		/* now add the binary part of the Rice code */
-		if (k) {
-			register unsigned long temp;
-			absErrval <<= k;
-			GETBITS(temp,k);
-			absErrval += temp;
-		}
-	}
-	else {
-		/* the original unary would have been too long:
-			(mapped value)-1 was sent verbatim */
-		GETBITS(absErrval, qbpp);
-		absErrval ++;
-	}
+        temp = zeroLUT[reg >> 24];
+        absErrval += temp;
+        if (temp != 8) {
+            FILLBUFFER(temp + 1);
+            break;
+        }
+        FILLBUFFER(8);
+    } while (1);
 
-	/* Do the Rice mapping */
-	if ( absErrval & 1 ) {        /* negative */
-		absErrval = (absErrval + 1) / 2;
-		Errval = -absErrval;
-	} else {
-		absErrval /= 2;
-		Errval = absErrval;
-	}
+    if ( absErrval < limit ) {
+        /* now add the binary part of the Rice code */
+        if (k) {
+            register unsigned long temp;
+            absErrval <<= k;
+            GETBITS(temp,k);
+            absErrval += temp;
+        }
+    }
+    else {
+        /* the original unary would have been too long:
+            (mapped value)-1 was sent verbatim */
+        GETBITS(absErrval, qbpp);
+        absErrval ++;
+    }
 
-	Bt = B[Q];
+    /* Do the Rice mapping */
+    if ( absErrval & 1 ) {        /* negative */
+        absErrval = (absErrval + 1) / 2;
+        Errval = -absErrval;
+    } else {
+        absErrval /= 2;
+        Errval = absErrval;
+    }
 
-	/* if ( k==0 && (2*Bt <= -qmul[Nt]) ) */
-	if ( k==0 && NEAR==0 && (2*Bt <= -Nt) ) 
-	{
-	/* special case: see encoder side */
-		Errval = -(Errval+1);
-		absErrval = (Errval<0)?(-Errval):Errval;
-	}
+    Bt = B[Q];
 
-	Errval = qmul[Errval];  /* dequantize prediction error */
+    /* if ( k==0 && (2*Bt <= -qmul[Nt]) ) */
+    if ( k==0 && NEAR==0 && (2*Bt <= -Nt) ) 
+    {
+    /* special case: see encoder side */
+        Errval = -(Errval+1);
+        absErrval = (Errval<0)?(-Errval):Errval;
+    }
 
-	/* center, clip if necessary, and mask final error */
-	if ( SIGN == -1 ) {
-	    Px -= C[Q];
-	    clip(Px, alpha);
-	    current = Px - Errval;
-	}
-	else {
-	    Px += C[Q];
-	    clip(Px,alpha);
-	    current = Px + Errval;
-	}
+    Errval = qmul[Errval];  /* dequantize prediction error */
 
-	/* first, we reduce mod beta in the range -NEAR <= x <= alpha-1+NEAR,
-	   then we clip to [0,alpha] */
-	if (current < negNEAR)
-		current += beta;
-	else if (current > alpha1eps)
-		current -= beta;
+    /* center, clip if necessary, and mask final error */
+    if ( SIGN == -1 ) {
+        Px -= C[Q];
+        clip(Px, alpha);
+        current = Px - Errval;
+    }
+    else {
+        Px += C[Q];
+        clip(Px,alpha);
+        current = Px + Errval;
+    }
 
-	clip(current,alpha);
+    /* first, we reduce mod beta in the range -NEAR <= x <= alpha-1+NEAR,
+       then we clip to [0,alpha] */
+    if (current < negNEAR)
+        current += beta;
+    else if (current > alpha1eps)
+        current -= beta;
 
-	/* update bias stats */
-	B[Q] = (Bt += Errval);
+    clip(current,alpha);
 
-	/* update Golomb-Rice stats */
-	A[Q] += absErrval;
+    /* update bias stats */
+    B[Q] = (Bt += Errval);
 
-	/* check reset (joint for Rice-Golomb and bias cancelation) */
-	if(Nt == reset) {
-		N[Q] = (Nt >>= 1);
-		A[Q] >>= 1;
-		B[Q] = (Bt >>= 1);
-	}
+    /* update Golomb-Rice stats */
+    A[Q] += absErrval;
 
-	/* Do bias estimation for NEXT pixel */
-	N[Q] = (++Nt);
-	if  ( Bt <= -Nt ) {
+    /* check reset (joint for Rice-Golomb and bias cancelation) */
+    if(Nt == reset) {
+        N[Q] = (Nt >>= 1);
+        A[Q] >>= 1;
+        B[Q] = (Bt >>= 1);
+    }
 
-	    if (C[Q] > MIN_C)
-			--C[Q];
+    /* Do bias estimation for NEXT pixel */
+    N[Q] = (++Nt);
+    if  ( Bt <= -Nt ) {
 
-	    Bt = (B[Q] += Nt);
+        if (C[Q] > MIN_C)
+            --C[Q];
 
-	    if ( Bt <= -Nt ) 
-			B[Q] = -Nt+1;
+        Bt = (B[Q] += Nt);
 
-	} else if ( Bt > 0 ) {
+        if ( Bt <= -Nt ) 
+            B[Q] = -Nt+1;
 
-	    if (C[Q] < MAX_C)
-			++C[Q];
+    } else if ( Bt > 0 ) {
 
-	    Bt = (B[Q] -= Nt);
+        if (C[Q] < MAX_C)
+            ++C[Q];
 
-	    if ( Bt > 0 )
-			B[Q] = 0;
-	}
+        Bt = (B[Q] -= Nt);
 
-	return current;
+        if ( Bt > 0 )
+            B[Q] = 0;
+    }
+
+    return current;
 }
-
-
-
-
 
 
 /* Do end of run DECODING for LOSSY images */
 __inline pixel lossy_end_of_run_d(pixel Ra, pixel Rb, int RItype)
 {
-	int xpr,
-		Ix,
-		Errval,
-		absErrval,
-		MErrval,
-		k,
-		Q,
-		oldmap, 
-		Nt,
-		At;
+    int Ix,
+        Errval,
+        absErrval,
+        MErrval,
+        k,
+        Q,
+        oldmap, 
+        Nt,
+        At;
 
-	Q = EOR_0 + RItype;
-	Nt = N[Q], 
-	At = A[Q];
+    Q = EOR_0 + RItype;
+    Nt = N[Q], 
+    At = A[Q];
 
-	if ( RItype )
-		At += Nt/2;
+    if ( RItype )
+        At += Nt/2;
 
-	/* Estimate k */
-	for(k=0; Nt < At; Nt *=2, k++);
+    /* Estimate k */
+    for (k = 0; Nt < At; Nt *= 2, k++);
 
-	/* read and decode the Golomb code */
-	/* Get the number of leading zeros */
-	MErrval = 0;
-	do {
-		int temp;
+    /* read and decode the Golomb code */
+    /* Get the number of leading zeros */
+    MErrval = 0;
+    do {
+        int temp;
 
-		temp = zeroLUT[reg >> 24];
-		MErrval += temp;
-		if (temp != 8) {
-			FILLBUFFER(temp + 1);
-			break;
-		}
-		FILLBUFFER(8);
-	} while (1);
+        temp = zeroLUT[reg >> 24];
+        MErrval += temp;
+        if (temp != 8) {
+            FILLBUFFER(temp + 1);
+            break;
+        }
+        FILLBUFFER(8);
+    } while (1);
 
-	eor_limit = limit - limit_reduce;
+    eor_limit = limit - limit_reduce;
 
-	if ( MErrval < eor_limit ) {
-		/* now add the binary part of the Golomb code */
-		if (k) {
-			register unsigned long temp;
-			MErrval <<= k;
-			GETBITS(temp,k);
-			MErrval += temp;
-	    }
-	}
-	else {
-	    /* the original unary would have been too long:
-	       (mapped value)-1 was sent verbatim */
-	    GETBITS(MErrval, qbpp);
-	    MErrval ++;
-	}
+    if ( MErrval < eor_limit ) {
+        /* now add the binary part of the Golomb code */
+        if (k) {
+            register unsigned long temp;
+            MErrval <<= k;
+            GETBITS(temp,k);
+            MErrval += temp;
+        }
+    }
+    else {
+        /* the original unary would have been too long:
+           (mapped value)-1 was sent verbatim */
+        GETBITS(MErrval, qbpp);
+        MErrval ++;
+    }
 
-	oldmap = ( k==0 && (RItype||MErrval) && (2*B[Q]<Nt));
-	/* 
-	   Note: the Boolean variable 'oldmap' is not 
-	   identical to the variable 'map' in the
-	   JPEG-LS draft. We have
+    oldmap = ( k==0 && (RItype||MErrval) && (2*B[Q]<Nt));
+    /* 
+       Note: the Boolean variable 'oldmap' is not 
+       identical to the variable 'map' in the
+       JPEG-LS draft. We have
        oldmap = (qdiff<0) ? (1-map) : map;
-	*/
+    */
 
-	MErrval += ( RItype + oldmap );
+    MErrval += ( RItype + oldmap );
 
-	if ( MErrval & 1 ) { /* negative */
-	    Errval = oldmap - (MErrval+1)/2;
-	    absErrval = -Errval-RItype;
-	    B[Q]++;
-	}
-	else { /* nonnegative */
-	    Errval = MErrval/2;
-	    absErrval = Errval-RItype;
-	}
+    if ( MErrval & 1 ) { /* negative */
+        Errval = oldmap - (MErrval+1)/2;
+        absErrval = -Errval-RItype;
+        B[Q]++;
+    }
+    else { /* nonnegative */
+        Errval = MErrval/2;
+        absErrval = Errval-RItype;
+    }
 
-	Errval = qmul[Errval];   /* de-quantize prediction error */
-	if ( RItype ) {
-	    Ix = Ra + Errval;
-	}
-	else  {
-	    if ( Rb < Ra )
-			Ix = Rb - Errval;
-	    else
-			Ix = Rb + Errval;
-	}
+    Errval = qmul[Errval];   /* de-quantize prediction error */
+    if ( RItype ) {
+        Ix = Ra + Errval;
+    }
+    else  {
+        if ( Rb < Ra )
+            Ix = Rb - Errval;
+        else
+            Ix = Rb + Errval;
+    }
 
-	if ( Ix < negNEAR )
-		Ix += beta;
-	else if ( Ix > alpha1eps )
-		Ix -= beta;
+    if ( Ix < negNEAR )
+        Ix += beta;
+    else if ( Ix > alpha1eps )
+        Ix -= beta;
 
-	clip(Ix,alpha);
+    clip(Ix,alpha);
 
-	/* update stats */
-	A[Q] += absErrval;
-	if (N[Q] == reset) {
-	    N[Q] >>= 1;
-	    A[Q] >>= 1;
-	    B[Q] >>= 1;
-	}
+    /* update stats */
+    A[Q] += absErrval;
+    if (N[Q] == reset) {
+        N[Q] >>= 1;
+        A[Q] >>= 1;
+        B[Q] >>= 1;
+    }
 
-	N[Q]++;  /* for next pixel */
+    N[Q]++;  /* for next pixel */
 
-	return Ix;
-			
+    return (pixel)Ix;
 }
-
-
-
 
 
 /* For DECODING line and plane interleaved mode for LOSSY images*/
-int lossy_undoscanline(	pixel *psl,			/* previous scanline */
-						pixel *sl,			/* current scanline */
-						int no, int color)	/* number of values in it */
+int lossy_undoscanline( pixel *psl,         /* previous scanline */
+                        pixel *sl,          /* current scanline */
+                        int no, int color)  /* number of values in it */
 /*** watch it! actual pixels in the scan line are numbered 1 to no .
      pixels with indices < 1 or > no are dummy "border" pixels  */
 {
-	int i, psfix;
-	pixel Ra, Rb, Rc, Rd;
-	int SIGN;
-	int cont;
-	int run_int_type;
+    int i, psfix;
+    pixel Ra, Rb, Rc, Rd;
+    int SIGN;
+    int cont;
+    int run_int_type;
 
-	psfix = 0;
+    psfix = 0;
 
-	/**********************************************/
-	/* Do for all pixels in the row in 8-bit mode */
-	/**********************************************/
-	if (bpp16==FALSE)
-	{
-		Rc = psl[0];
-		Rb = psl[1];
-		Ra = sl[0];
+    /**********************************************/
+    /* Do for all pixels in the row in 8-bit mode */
+    /**********************************************/
+    if (bpp16==FALSE)
+    {
+        Rc = psl[0];
+        Rb = psl[1];
+        Ra = sl[0];
 
-		i = 1;
+        i = 1;
 
-		do {
-			pixel Px;
-			Rd = psl[i + 1];
+        do {
+            pixel Px;
+            Rd = psl[i + 1];
 
-			/* Quantize the gradient */
-			cont =  vLUT[0][Rd - Rb + LUTMAX8] +
-					vLUT[1][Rb - Rc + LUTMAX8] +
-					vLUT[2][Rc - Ra + LUTMAX8];
+            /* Quantize the gradient */
+            cont =  vLUT[0][Rd - Rb + LUTMAX8] +
+                    vLUT[1][Rb - Rc + LUTMAX8] +
+                    vLUT[2][Rc - Ra + LUTMAX8];
 
-			if ( cont == 0 ) {
+            if ( cont == 0 ) {
 
-				/********** RUN STATE *********/
+                /********** RUN STATE *********/
 
-				register int n, m;
+                register int n, m;
 
-				/* get length of the run */
-				/* arg is # of pixels left */
-				m = n= process_run_dec(no-i+1, color); 
+                /* get length of the run */
+                /* arg is # of pixels left */
+                m = n= process_run_dec(no-i+1, color); 
 
-				if ( m > 0 )  {  /* run of nonzero length, otherwise
-									we go directly to the end-of-run 
-									state */
-					do {
-						sl[i++] = Ra;
-					} while(--n > 0);
+                if ( m > 0 )  {  /* run of nonzero length, otherwise
+                                    we go directly to the end-of-run 
+                                    state */
+                    do {
+                        sl[i++] = Ra;
+                    } while(--n > 0);
 
-					if (i > no)
-						/* end of line */
-						return 0;
+                    if (i > no)
+                        /* end of line */
+                        return 0;
 
-					/* update context pixels */
-					Rb = psl[i];
-					Rd = psl[i + 1];
-				}
+                    /* update context pixels */
+                    Rb = psl[i];
+                    Rd = psl[i + 1];
+                }
 
-				/* here we handle the "end-of-run" state */
-				run_int_type = ( (Rb-Ra) <= NEAR && (Rb-Ra) >= negNEAR);
-				Ra = lossy_end_of_run_d(Ra, Rb, run_int_type);
-			}
-			else {
+                /* here we handle the "end-of-run" state */
+                run_int_type = ( (Rb-Ra) <= NEAR && (Rb-Ra) >= negNEAR);
+                Ra = lossy_end_of_run_d(Ra, Rb, run_int_type);
+            }
+            else {
 
-				/****** REGULAR CONTEXT ******/
+                /****** REGULAR CONTEXT ******/
 
-				predict(Rb, Ra, Rc);
+                predict(Rb, Ra, Rc);
 
-				/* map symmetric contexts */
-				cont = classmap[cont];
+                /* map symmetric contexts */
+                cont = classmap[cont];
 
-				if (cont < 0) 
-				{
-					SIGN = -1;
-					cont = -cont;
-				}
-				else
-					SIGN = +1;
+                if (cont < 0) 
+                {
+                    SIGN = -1;
+                    cont = -cont;
+                }
+                else
+                    SIGN = +1;
 
-				/* decode a Rice code of a given context */
-				Ra = lossy_regular_mode_d(cont, SIGN, Px);
-			}
+                /* decode a Rice code of a given context */
+                Ra = (pixel)lossy_regular_mode_d(cont, SIGN, Px);
+            }
 
-			sl[i] = Ra;
-			Rc = Rb;
-			Rb = Rd;
-			++i;
+            sl[i] = Ra;
+            Rc = Rb;
+            Rb = Rd;
+            ++i;
 
-		} while (i <= no);
+        } while (i <= no);
 
-	} else
-	/***********************************************/
-	/* Do for all pixels in the row in 16-bit mode */
-	/***********************************************/
-	{
+    } else
+    /***********************************************/
+    /* Do for all pixels in the row in 16-bit mode */
+    /***********************************************/
+    {
 
-		Rc = ENDIAN16(psl[0]);
-		Rb = ENDIAN16(psl[1]);
-		Ra = ENDIAN16(sl[0]);
-		i = 1;
+        Rc = ENDIAN16(psl[0]);
+        Rb = ENDIAN16(psl[1]);
+        Ra = ENDIAN16(sl[0]);
+        i = 1;
 
-		do {
-			pixel Px;
+        do {
+            pixel Px;
 
-			Rd = ENDIAN16(psl[i + 1]);
+            Rd = ENDIAN16(psl[i + 1]);
 
-			/* Quantize the gradient */
-			{
-				register int diff;
+            /* Quantize the gradient */
+            {
+                register int diff;
 
-				/* Following segment assumes that T3 <= LUTMAX16 */
-				/* This condition should have been checked when the
-				   lookup tables were built */
-				diff = Rd - Rb;
-				if (diff < 0)
-					cont = (diff > -LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 7*CREGIONS*CREGIONS;
-				else 
-					cont = (diff < LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 8*CREGIONS*CREGIONS;
+                /* Following segment assumes that T3 <= LUTMAX16 */
+                /* This condition should have been checked when the
+                   lookup tables were built */
+                diff = Rd - Rb;
+                if (diff < 0)
+                    cont = (diff > -LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 7*CREGIONS*CREGIONS;
+                else 
+                    cont = (diff < LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 8*CREGIONS*CREGIONS;
 
-				diff = Rb - Rc;
-				if (diff < 0)
-					cont += (diff > -LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 7*CREGIONS;
-				else 
-					cont += (diff < LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 8*CREGIONS;
+                diff = Rb - Rc;
+                if (diff < 0)
+                    cont += (diff > -LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 7*CREGIONS;
+                else 
+                    cont += (diff < LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 8*CREGIONS;
 
-				diff = Rc - Ra;
-				if (diff < 0)
-					cont += (diff > -LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 7;
-				else 
-					cont += (diff < LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 8;
-			}
+                diff = Rc - Ra;
+                if (diff < 0)
+                    cont += (diff > -LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 7;
+                else 
+                    cont += (diff < LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 8;
+            }
 
-			if ( cont == 0 ) {
+            if ( cont == 0 ) {
 
-		    /********* RUN STATE *********/
+            /********* RUN STATE *********/
 
-				register int n, m;
+                register int n, m;
 
-				/* get length of the run */
-				/* arg is # of pixels left */
-				m = n = process_run_dec(no-i+1, color); 
+                /* get length of the run */
+                /* arg is # of pixels left */
+                m = n = process_run_dec(no-i+1, color); 
 
-			    if ( m > 0 )  {  /* run of nonzero length, otherwise
-									we go directly to the end-of-run 
-									state */
-					do {
-						sl[i++] = ENDIAN16(Ra);
-					} while(--n > 0);
+                if ( m > 0 )  {  /* run of nonzero length, otherwise
+                                    we go directly to the end-of-run 
+                                    state */
+                    do {
+                        sl[i++] = ENDIAN16(Ra);
+                    } while(--n > 0);
 
-					if (i > no)
-					    /* end of line */
-				    return 0;
+                    if (i > no)
+                        /* end of line */
+                    return 0;
 
-					/* update context pixels */
-				    Rb = ENDIAN16(psl[i]);
-				    Rd = ENDIAN16(psl[i + 1]);
-				}
+                    /* update context pixels */
+                    Rb = ENDIAN16(psl[i]);
+                    Rd = ENDIAN16(psl[i + 1]);
+                }
 
-				/* here we handle the "end-of-run" state, which is 
-					treated separately from regular states */
-				run_int_type = ( (Rb-Ra) <= NEAR && (Rb-Ra) >= negNEAR);
-				Ra = lossy_end_of_run_d(Ra, Rb, run_int_type);
+                /* here we handle the "end-of-run" state, which is 
+                    treated separately from regular states */
+                run_int_type = ( (Rb-Ra) <= NEAR && (Rb-Ra) >= negNEAR);
+                Ra = lossy_end_of_run_d(Ra, Rb, run_int_type);
 
-			}
-			else {
+            }
+            else {
 
-			/******REGULAR CONTEXT ******/
+            /******REGULAR CONTEXT ******/
 
-				predict(Rb, Ra, Rc);
+                predict(Rb, Ra, Rc);
 
-				/* map symmetric contexts */
-				cont = classmap[cont];
+                /* map symmetric contexts */
+                cont = classmap[cont];
 
-				if (cont < 0) 
-				{
-					SIGN = -1;
-					cont = -cont;
-				}
-				else
-					SIGN = +1;
+                if (cont < 0) 
+                {
+                    SIGN = -1;
+                    cont = -cont;
+                }
+                else
+                    SIGN = +1;
 
-				/* decode a Rice code of a given context */
-			    Ra = lossy_regular_mode_d(cont, SIGN, Px);
-			}
+                /* decode a Rice code of a given context */
+                Ra = (pixel)lossy_regular_mode_d(cont, SIGN, Px);
+            }
 
-			sl[i] = ENDIAN16(Ra);
-			Rc = Rb;
-			Rb = Rd;
-			++i;
+            sl[i] = ENDIAN16(Ra);
+            Rc = Rb;
+            Rb = Rd;
+            ++i;
 
-		} while (i <= no);
+        } while (i <= no);
 
-	} /* ends "if 8/16 bit" */
+    } /* ends "if 8/16 bit" */
 
-	return 0;
+    return 0;
 }
 
 
-
-
-
-
-
 /* For DECODING pixel interleaved mode in LOSSY mode */
-int lossy_undoscanline_pixel(	pixel *psl,		/* previous scanline */
-								pixel *sl,		/* current scanline */
-								int no)			/* number of values in it */
+int lossy_undoscanline_pixel(   pixel *psl,     /* previous scanline */
+                                pixel *sl,      /* current scanline */
+                                int no)         /* number of values in it */
 /*** watch it! actual pixels in the scan line are numbered 1 to no .
      pixels with indices < 1 or > no are dummy "border" pixels  */
 {
-	int i, psfix, n_c, color, enter_run=0, break_run, was_in_run = 0,
-	    test_run;
-	pixel Ra, Rb, Rc, Rd;
-	pixel c_aa[MAX_COMPONENTS],
-	      c_bb[MAX_COMPONENTS],
-	      c_cc[MAX_COMPONENTS],
-	      c_dd[MAX_COMPONENTS],
-	      c_xx[MAX_COMPONENTS];
-	int	SIGN;
-	int cont,c_cont[MAX_COMPONENTS];
+    int i, psfix, n_c, color, enter_run=0, was_in_run = 0,
+        test_run;
+    pixel Ra, Rb, Rc, Rd;
+    pixel c_aa[MAX_COMPONENTS],
+          c_bb[MAX_COMPONENTS],
+          c_cc[MAX_COMPONENTS],
+          c_dd[MAX_COMPONENTS],
+          c_xx[MAX_COMPONENTS];
+    int SIGN;
+    int cont,c_cont[MAX_COMPONENTS];
 
-	psfix = 0;
+    psfix = 0;
 
 
-	/**********************************************/
-	/* Do for all pixels in the row in 8-bit mode */
-	/**********************************************/
-	if (bpp16==FALSE)
-	{
+    /**********************************************/
+    /* Do for all pixels in the row in 8-bit mode */
+    /**********************************************/
+    if (bpp16==FALSE)
+    {
 
-		for (n_c=0; n_c<components; n_c++) {
-			c_cc[n_c] = psl[n_c];
-			c_bb[n_c] = psl[components+n_c];
-			c_aa[n_c] = sl[n_c];
-		}
+        for (n_c=0; n_c<components; n_c++) {
+            c_cc[n_c] = psl[n_c];
+            c_bb[n_c] = psl[components+n_c];
+            c_aa[n_c] = sl[n_c];
+        }
 
-		i = components;
-		color = -1;
+        i = components;
+        color = -1;
 
-		do {
-			pixel Px;
+        do {
+            pixel Px;
 
-			if (!was_in_run) color = (color+1)%components;
-			else color = 0;
+            if (!was_in_run) color = (color+1)%components;
+            else color = 0;
 
-			if (color == 0)
-			for (n_c=0;n_c<components;n_c++) {
+            if (color == 0)
+            for (n_c=0;n_c<components;n_c++) {
 
-				c_dd[n_c] = psl[i + components + n_c];
+                c_dd[n_c] = psl[i + components + n_c];
 
-				/* Quantize the gradient */
-				c_cont[n_c] =	vLUT[0][c_dd[n_c] - c_bb[n_c] + LUTMAX8] +
-								vLUT[1][c_bb[n_c] - c_cc[n_c] + LUTMAX8] +
-								vLUT[2][c_cc[n_c] - c_aa[n_c] + LUTMAX8];
-			}
+                /* Quantize the gradient */
+                c_cont[n_c] =   vLUT[0][c_dd[n_c] - c_bb[n_c] + LUTMAX8] +
+                                vLUT[1][c_bb[n_c] - c_cc[n_c] + LUTMAX8] +
+                                vLUT[2][c_cc[n_c] - c_aa[n_c] + LUTMAX8];
+            }
 
-			Ra=c_aa[color];
-			Rb=c_bb[color];
-			Rc=c_cc[color];
-			Rd=c_dd[color];
-			cont=c_cont[color];
+            Ra=c_aa[color];
+            Rb=c_bb[color];
+            Rc=c_cc[color];
+            Rd=c_dd[color];
+            cont=c_cont[color];
 
-			enter_run = was_in_run = test_run = 0;
-		
-			if (color == 0) {
-				test_run = 1;
-				for (n_c=0;n_c<components;n_c++)
-					if (c_cont[n_c]!=0) {
-						test_run=0;
-						break;
-					}
-			}
+            enter_run = was_in_run = test_run = 0;
 
-			if ( test_run ) {
+            if (color == 0) {
+                test_run = 1;
+                for (n_c=0;n_c<components;n_c++)
+                    if (c_cont[n_c]!=0) {
+                        test_run=0;
+                        break;
+                    }
+            }
 
-		    /********* RUN STATE *********/
+            if ( test_run ) {
 
-				register int n, m;
+            /********* RUN STATE *********/
 
-				enter_run = was_in_run = 1;
+                register int n, m;
 
-				/* get length of the run */
-				/* arg is # of pixels left */
-				m = n = process_run_dec((no+components-1-i+1)/components, 0); 
+                enter_run = was_in_run = 1;
 
-				if ( m > 0 )  {  /* run of nonzero length, otherwise
-									we go directly to the end-of-run 
-									state */
-					do {
-						for (n_c=0;n_c<components;n_c++) {
-							sl[i++] = c_aa[n_c];
-						}
-					} while(--n > 0);
+                /* get length of the run */
+                /* arg is # of pixels left */
+                m = n = process_run_dec((no+components-1-i+1)/components, 0); 
 
-					if (i > no+components-1)
-						/* end of line */
-						return 0;
+                if ( m > 0 )  {  /* run of nonzero length, otherwise
+                                    we go directly to the end-of-run 
+                                    state */
+                    do {
+                        for (n_c=0;n_c<components;n_c++) {
+                            sl[i++] = c_aa[n_c];
+                        }
+                    } while(--n > 0);
 
-					/* update context pixels */
-					for (n_c=0;n_c<components;n_c++) {
-			    		c_bb[n_c] = psl[i+n_c];
-			    		c_dd[n_c] = psl[i+components+n_c];
-					}
-				}
+                    if (i > no+components-1)
+                        /* end of line */
+                        return 0;
 
-				/* here we handle the "end-of-run" state */
-				for (n_c=0;n_c<components;n_c++) {
-					/* The end of run is processed for each component */
-					Ra = c_aa[n_c];
-					Rb = c_bb[n_c];
+                    /* update context pixels */
+                    for (n_c=0;n_c<components;n_c++) {
+                        c_bb[n_c] = psl[i+n_c];
+                        c_dd[n_c] = psl[i+components+n_c];
+                    }
+                }
 
-					c_aa[n_c] = c_xx[n_c] = lossy_end_of_run_d(Ra, Rb, 0);
+                /* here we handle the "end-of-run" state */
+                for (n_c=0;n_c<components;n_c++) {
+                    /* The end of run is processed for each component */
+                    Ra = c_aa[n_c];
+                    Rb = c_bb[n_c];
 
-				}       /* Components loop */
-			} 
-			else {
+                    c_aa[n_c] = c_xx[n_c] = lossy_end_of_run_d(Ra, Rb, 0);
 
-			/****** REGULAR CONTEXT *******/
+                }       /* Components loop */
+            } 
+            else {
 
-				predict(Rb, Ra, Rc);
+            /****** REGULAR CONTEXT *******/
 
-				cont = classmap[cont];
+                predict(Rb, Ra, Rc);
 
-				if (cont < 0) 
-				{
-					SIGN = -1;
-					cont = -cont;
-				}
-				else
-					SIGN = +1;
+                cont = classmap[cont];
 
-				/* decode a Rice code of a given context */
-			    c_aa[color] = Ra = lossy_regular_mode_d(cont, SIGN, Px);
+                if (cont < 0) 
+                {
+                    SIGN = -1;
+                    cont = -cont;
+                }
+                else
+                    SIGN = +1;
 
-			}
+                /* decode a Rice code of a given context */
+                c_aa[color] = Ra = (pixel)lossy_regular_mode_d(cont, SIGN, Px);
 
-			if (!was_in_run) {
-				sl[i] = Ra;
-				c_cc[color] = Rb;
-				c_bb[color] = Rd;
-				i++;
-			}
-			else {
-				for (n_c=0;n_c<components;n_c++) {
-					sl[i+n_c] = c_aa[n_c];
-					c_cc[n_c] = c_bb[n_c];
-					c_bb[n_c] = c_dd[n_c];
-				}
-				i+=components;
-			}
-	
-		} while (i <= (no+components-1));
+            }
 
-	} else
+            if (!was_in_run) {
+                sl[i] = Ra;
+                c_cc[color] = Rb;
+                c_bb[color] = Rd;
+                i++;
+            }
+            else {
+                for (n_c=0;n_c<components;n_c++) {
+                    sl[i+n_c] = c_aa[n_c];
+                    c_cc[n_c] = c_bb[n_c];
+                    c_bb[n_c] = c_dd[n_c];
+                }
+                i+=components;
+            }
+    
+        } while (i <= (no+components-1));
 
-	/***********************************************/
-	/* Do for all pixels in the row in 16-bit mode */
-	/***********************************************/
-	{
+    } else
 
-		for (n_c=0; n_c<components; n_c++) {
-			c_cc[n_c] = ENDIAN16(psl[n_c]);
-			c_bb[n_c] = ENDIAN16(psl[components+n_c]);
-			c_aa[n_c] = ENDIAN16(sl[n_c]);
-		}
+    /***********************************************/
+    /* Do for all pixels in the row in 16-bit mode */
+    /***********************************************/
+    {
 
-		i = components;
-		color = -1;
+        for (n_c=0; n_c<components; n_c++) {
+            c_cc[n_c] = ENDIAN16(psl[n_c]);
+            c_bb[n_c] = ENDIAN16(psl[components+n_c]);
+            c_aa[n_c] = ENDIAN16(sl[n_c]);
+        }
 
-		do {
-			pixel Px;
+        i = components;
+        color = -1;
 
-			if (!was_in_run) color = (color+1)%components;
-			else color = 0;
+        do {
+            pixel Px;
 
-			if (color == 0)
-				for (n_c=0;n_c<components;n_c++) {
+            if (!was_in_run) color = (color+1)%components;
+            else color = 0;
 
-					c_dd[n_c] = ENDIAN16(psl[i + components + n_c]);
+            if (color == 0)
+                for (n_c=0;n_c<components;n_c++) {
 
-					/* Quantize the gradient */
-					{
-						register int diff;
+                    c_dd[n_c] = ENDIAN16(psl[i + components + n_c]);
 
-						/* Following segment assumes that T3 <= LUTMAX16 */
-						/* This condition should have been checked when the
-							lookup tables were built */
-						diff = c_dd[n_c] - c_bb[n_c];
-						if (diff < 0)
-							c_cont[n_c] = (diff > -LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 7*CREGIONS*CREGIONS;
-						else 
-							c_cont[n_c] = (diff < LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 8*CREGIONS*CREGIONS;
+                    /* Quantize the gradient */
+                    {
+                        register int diff;
 
-						diff = c_bb[n_c] - c_cc[n_c];
-						if (diff < 0)
-							c_cont[n_c] += (diff > -LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 7*CREGIONS;
-						else 
-							c_cont[n_c] += (diff < LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 8*CREGIONS;
+                        /* Following segment assumes that T3 <= LUTMAX16 */
+                        /* This condition should have been checked when the
+                            lookup tables were built */
+                        diff = c_dd[n_c] - c_bb[n_c];
+                        if (diff < 0)
+                            c_cont[n_c] = (diff > -LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 7*CREGIONS*CREGIONS;
+                        else 
+                            c_cont[n_c] = (diff < LUTMAX16) ? vLUT[0][diff + LUTMAX16] : 8*CREGIONS*CREGIONS;
 
-						diff = c_cc[n_c] - c_aa[n_c];
-						if (diff < 0)
-							c_cont[n_c] += (diff > -LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 7;
-						else 
-							c_cont[n_c] += (diff < LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 8;
-					}
-				}
+                        diff = c_bb[n_c] - c_cc[n_c];
+                        if (diff < 0)
+                            c_cont[n_c] += (diff > -LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 7*CREGIONS;
+                        else 
+                            c_cont[n_c] += (diff < LUTMAX16) ? vLUT[1][diff + LUTMAX16] : 8*CREGIONS;
 
-			Ra=c_aa[color];
-			Rb=c_bb[color];
-			Rc=c_cc[color];
-			Rd=c_dd[color];
-			cont=c_cont[color];
+                        diff = c_cc[n_c] - c_aa[n_c];
+                        if (diff < 0)
+                            c_cont[n_c] += (diff > -LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 7;
+                        else 
+                            c_cont[n_c] += (diff < LUTMAX16) ? vLUT[2][diff + LUTMAX16] : 8;
+                    }
+                }
 
-			enter_run = was_in_run = test_run = 0;
-		
-			if (color == 0) {
-				test_run = 1;
-				for (n_c=0;n_c<components;n_c++)
-					if (c_cont[n_c]!=0) {
-						test_run=0;
-						break;
-					}
-			}
+            Ra=c_aa[color];
+            Rb=c_bb[color];
+            Rc=c_cc[color];
+            Rd=c_dd[color];
+            cont=c_cont[color];
 
-			if ( test_run ) {
+            enter_run = was_in_run = test_run = 0;
+        
+            if (color == 0) {
+                test_run = 1;
+                for (n_c=0;n_c<components;n_c++)
+                    if (c_cont[n_c]!=0) {
+                        test_run=0;
+                        break;
+                    }
+            }
 
-		    /********* RUN STATE *********/
+            if ( test_run ) {
 
-				register int n, m;
+            /********* RUN STATE *********/
 
-				enter_run = was_in_run = 1;
+                register int n, m;
 
-				/* get length of the run */
-				/* arg is # of pixels left */
-				m = n = process_run_dec((no+components-1-i+1)/components, 0); 
+                enter_run = was_in_run = 1;
 
-				if ( m > 0 )  {  /* run of nonzero length, otherwise
-									we go directly to the end-of-run 
-									state */
-					do {
-						for (n_c=0;n_c<components;n_c++) {
-							sl[i++] = ENDIAN16(c_aa[n_c]);
-						}
-					} while(--n > 0);
+                /* get length of the run */
+                /* arg is # of pixels left */
+                m = n = process_run_dec((no+components-1-i+1)/components, 0); 
 
-					if (i > no+components-1)
-						/* end of line */
-						return 0;
+                if ( m > 0 )  {  /* run of nonzero length, otherwise
+                                    we go directly to the end-of-run 
+                                    state */
+                    do {
+                        for (n_c=0;n_c<components;n_c++) {
+                            sl[i++] = ENDIAN16(c_aa[n_c]);
+                        }
+                    } while(--n > 0);
 
-					/* update context pixels */
-					for (n_c=0;n_c<components;n_c++) {
-			    		c_bb[n_c] = ENDIAN16(psl[i+n_c]);
-			    		c_dd[n_c] = ENDIAN16(psl[i+components+n_c]);
-					}
-				}
+                    if (i > no+components-1)
+                        /* end of line */
+                        return 0;
 
-				/* here we handle the "end-of-run" state */
-			    for (n_c=0;n_c<components;n_c++) {
-				    /* The end of run is processed for each component */
-					Ra = c_aa[n_c];
-					Rb = c_bb[n_c];
-					c_aa[n_c] = c_xx[n_c] = lossy_end_of_run_d(Ra, Rb, 0);
-				}       /* Components loop */
+                    /* update context pixels */
+                    for (n_c=0;n_c<components;n_c++) {
+                        c_bb[n_c] = ENDIAN16(psl[i+n_c]);
+                        c_dd[n_c] = ENDIAN16(psl[i+components+n_c]);
+                    }
+                }
 
-			}
-			else {
+                /* here we handle the "end-of-run" state */
+                for (n_c=0;n_c<components;n_c++) {
+                    /* The end of run is processed for each component */
+                    Ra = c_aa[n_c];
+                    Rb = c_bb[n_c];
+                    c_aa[n_c] = c_xx[n_c] = lossy_end_of_run_d(Ra, Rb, 0);
+                }       /* Components loop */
 
-			/******* REGULAR CONTEXT *******/
+            }
+            else {
 
-			    predict(Rb, Ra, Rc);
-				
-				cont = classmap[cont];
-				if (cont < 0) 
-				{
-					SIGN = -1;
-					cont = -cont;
-				}
-				else
-					SIGN = +1;
+            /******* REGULAR CONTEXT *******/
 
-				/* decode a Rice code of a given context */
-			    c_aa[color] = Ra = lossy_regular_mode_d(cont, SIGN, Px);
-			}
+                predict(Rb, Ra, Rc);
+                
+                cont = classmap[cont];
+                if (cont < 0) 
+                {
+                    SIGN = -1;
+                    cont = -cont;
+                }
+                else
+                    SIGN = +1;
 
-			if (!was_in_run) {
-				sl[i] = ENDIAN16(Ra);
-				c_cc[color] = Rb;
-				c_bb[color] = Rd;
-				i++;
-			}
-			else {
-				for (n_c=0;n_c<components;n_c++) {
-					sl[i+n_c] = ENDIAN16(c_aa[n_c]);
-					c_cc[n_c] = c_bb[n_c];
-					c_bb[n_c] = c_dd[n_c];
-				}
-				i+=components;
-			}
+                /* decode a Rice code of a given context */
+                c_aa[color] = Ra = (pixel)lossy_regular_mode_d(cont, SIGN, Px);
+            }
 
-		} while (i <= (no+components-1));
+            if (!was_in_run) {
+                sl[i] = ENDIAN16(Ra);
+                c_cc[color] = Rb;
+                c_bb[color] = Rd;
+                i++;
+            }
+            else {
+                for (n_c=0;n_c<components;n_c++) {
+                    sl[i+n_c] = ENDIAN16(c_aa[n_c]);
+                    c_cc[n_c] = c_bb[n_c];
+                    c_bb[n_c] = c_dd[n_c];
+                }
+                i+=components;
+            }
 
-	} /* for "if 8/16 bit" mode */
+        } while (i <= (no+components-1));
 
-	return 0;
+    } /* for "if 8/16 bit" mode */
+
+    return 0;
 }

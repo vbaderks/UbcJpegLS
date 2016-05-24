@@ -51,14 +51,14 @@
 
 #include "global.h"
 #include "bitio.h"
-
+#include <memory.h>
 
 extern int zeroLUT[];     /* lookup table to find number of leading zeroes */
 
 extern FILE *in, *out;
 
 byte negbuff[BUFSIZE+4];    /* byte I/O buffer, allowing for 4 "negative" 
-						       locations  */
+                               locations  */
 
 /*
  'buff' is defined as 'rawbuff+4' in bitio.h, so that buff[-4]..buff[-1]
@@ -67,7 +67,7 @@ byte negbuff[BUFSIZE+4];    /* byte I/O buffer, allowing for 4 "negative"
  */
 
 
-int fp; 	       /* index into byte buffer */
+int fp;            /* index into byte buffer */
 int truebufsize;       /* true size of byte buffer ( <= BUFSIZE) */
 int foundeof;
 
@@ -77,7 +77,7 @@ int zeroLUT[256];      /* table to find out number of leading zeros */
 /* BIT I/O variables */
 dword reg; /* BIT buffer for input/output */
 int bits;  /* number of bits free in bit buffer (on output) */
-	   /* (number of bits free)-8 in bit buffer (on input)*/
+       /* (number of bits free)-8 in bit buffer (on input)*/
 
 
 /****************************************************************************
@@ -86,8 +86,7 @@ int bits;  /* number of bits free in bit buffer (on output) */
  ****************************************************************************/
 
 
-void bufiinit(FILE *fil) {
-    /* argument is ignored */
+void bufiinit() {
     fp = BUFSIZE;
     truebufsize = 0;
     foundeof = 0;
@@ -96,32 +95,32 @@ void bufiinit(FILE *fil) {
 
 byte fillinbuff(FILE *fil)
 {
-	int i;
+    int i;
 
-	/* remember 4 last bytes of current buffer (for "undo") */
-	for ( i=-4; i<0; i++ )
-		buff[i] = buff[fp+i];
+    /* remember 4 last bytes of current buffer (for "undo") */
+    for ( i=-4; i<0; i++ )
+        buff[i] = buff[fp+i];
         truebufsize = fread(buff, 1, BUFSIZE, fil);
-	if ( truebufsize < BUFSIZE ) 
-	{
-	    if ( truebufsize <= 0 ) 
-		{
-			if ( foundeof ) 
-			{  /* second attempt to read past EOF */
-				fprintf(stderr,"*** Premature EOF in compressed file\n");
-				exit(10);
-			}
-			else 
-			{
-				/* One attempt to read past EOF is OK  */
-				foundeof = 1;
-			}
-	    }
-	    /* fill buffer with zeros */
-	    memset(buff+truebufsize, 0, (BUFSIZE-truebufsize)*sizeof(*buff));
-	}
+    if ( truebufsize < BUFSIZE ) 
+    {
+        if ( truebufsize <= 0 ) 
+        {
+            if ( foundeof ) 
+            {  /* second attempt to read past EOF */
+                fprintf(stderr,"*** Premature EOF in compressed file\n");
+                exit(10);
+            }
+            else 
+            {
+                /* One attempt to read past EOF is OK  */
+                foundeof = 1;
+            }
+        }
+        /* fill buffer with zeros */
+        memset(buff+truebufsize, 0, (BUFSIZE-truebufsize)*sizeof(*buff));
+    }
 
-	fp = 1;
+    fp = 1;
     return buff[0];
 }
 
@@ -139,56 +138,56 @@ void bitiinit() {
  */
 void bitiflush()  {
     int filled,
-	discard, 
-	dbytes,
-	i, k, treg;
+    discard, 
+    dbytes,
+    i, k, treg;
     byte *bp;
 
     filled = 24 - bits;    /* how many bits at the MS part of reg 
-			      have unused data. These correspond to 
-			      at most filled+2 bits from the input
-			      stream, as at most 2 '0' bits might have
-			      been dropped by marker processing */
+                  have unused data. These correspond to 
+                  at most filled+2 bits from the input
+                  stream, as at most 2 '0' bits might have
+                  been dropped by marker processing */
 
     dbytes = (filled+2)/8;  /* the coorrect number of bytes we need to
-				"unget" is either dbytes or dbytes-1 */
+                "unget" is either dbytes or dbytes-1 */
     /* this solution is more general than what is required here: it 
        will work correctly even if the end of a scan is not followed
        by a marker, as will necessarily be the case with the standard JPEG
        format */
     for ( ; ; dbytes-- ) 
-	{
-		bp = buff + fp - dbytes;  /* back-in the buffer */
-		treg = k = 0;
-		for ( i=0; i<dbytes; i++ ) 
-		{
-			if ( bp[i-1]==0xff && (bp[i]&0x80)==0 ) 
-			{
-				treg |= bp[i] << (BITBUFSIZE-7-k);
-				k += 7;
-			}
-			else 
-			{
-				treg |= bp[i] << (BITBUFSIZE-8-k);
-				k += 8;
-			}
-		}
+    {
+        bp = buff + fp - dbytes;  /* back-in the buffer */
+        treg = k = 0;
+        for ( i=0; i<dbytes; i++ ) 
+        {
+            if ( bp[i-1]==0xff && (bp[i]&0x80)==0 ) 
+            {
+                treg |= bp[i] << (BITBUFSIZE-7-k);
+                k += 7;
+            }
+            else 
+            {
+                treg |= bp[i] << (BITBUFSIZE-8-k);
+                k += 8;
+            }
+        }
 
-		if ( k <= filled )
-		break;
+        if ( k <= filled )
+        break;
     }
     /* check consistency */
     if ( filled-k > 7 ) {
-	fprintf(stderr,"bitiflush: inconsistent bits=%d filled=%d k=%d\n",bits,filled,k);
-	exit(10);
+    fprintf(stderr,"bitiflush: inconsistent bits=%d filled=%d k=%d\n",bits,filled,k);
+    exit(10);
     }
     discard = filled-k;
-    if ( treg != (reg<<discard) ) {
-	fprintf(stderr,"bitiflush: inconsistent bits=%d discard=%d reg=%08x treg=%08x\n",bits, discard, reg, treg);
-	exit(10);
+    if (((dword)treg) != (reg<<discard) ) {
+    fprintf(stderr,"bitiflush: inconsistent bits=%d discard=%d reg=%08x treg=%08x\n",bits, discard, reg, treg);
+    exit(10);
     }
     if ( reg & (((1<<discard)-1)<<(BITBUFSIZE-discard)) )
-	fprintf(stderr,"bitiflush: Warning: discarding nonzero bits; reg=%08x bits=%d discard=%d\n",reg,bits,discard);
+    fprintf(stderr,"bitiflush: Warning: discarding nonzero bits; reg=%08x bits=%d discard=%d\n",reg,bits,discard);
 
     fp -= dbytes;  /* do the unget */
     if ( buff[fp-1]==0xff && buff[fp]==0 ) fp++;
@@ -203,20 +202,18 @@ void bitiflush()  {
 /* Unpad zeros from byte length */
 void unpadzeros()
 {
-	int z;
+    int z;
 
-	z = bits % 8;
-	
-	if (bits!=24)
-	{
-		reg = (reg << z);
-		bits = bits + z;
-	}
+    z = bits % 8;
+    
+    if (bits!=24)
+    {
+        reg = (reg << z);
+        bits = bits + z;
+    }
 
 
 }
-	
-	
 
 
 /* creates the bit counting look-up table. */
@@ -236,8 +233,6 @@ void createzeroLUT()
         }
 }
 
-
-
 #ifdef IOFXNS
 /* if using functions instead of macros */
 dword
@@ -250,7 +245,7 @@ getbits(int no)
         fillbuffer(no);
         return temp;
 }
-#	define GETBITS(n)	getbits(n)
+#   define GETBITS(n)   getbits(n)
 #else
 /* see GETBITS(x,n) in bitio.h */
 #endif
