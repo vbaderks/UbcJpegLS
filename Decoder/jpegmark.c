@@ -207,8 +207,8 @@ write_jpegls_scan(FILE *out, jpeg_ls_header *jp)
 int
 write_jpegls_extmarker(FILE *out, jpeg_ls_header *jp)
 {
-    int marker_len, ct=0;
-         
+    int ct=0;
+
     ct += write_marker(out, LSE);   /* write JPEG-LS extended marker id */
 
     ct += write_n_bytes(out, 13, 2); /* marker length */
@@ -229,14 +229,14 @@ write_jpegls_extmarker(FILE *out, jpeg_ls_header *jp)
  */
 
 int
-seek_marker(FILE *in, int *mkp )
+seek_marker(FILE *input, int *mkp )
 /* Seeks a marker in the input stream. Returns the marker head, or EOF */
 {
     int c, c2, ct=0;
-    while ( (c=mygetc(in)) != EOF ) {
+    while ( (c=mygetc(input)) != EOF ) {
     ct ++;
     if ( c == 0xFF ) {
-        if ( (c2=mygetc(in)) == EOF )
+        if ( (c2=mygetc(input)) == EOF )
             return EOF;
         ct ++;
         if ( c2 & 0x80 ) {
@@ -247,29 +247,29 @@ seek_marker(FILE *in, int *mkp )
     }
     return EOF;
 }
-    
+
 
 unsigned int
-read_n_bytes(FILE *in, int n)
+read_n_bytes(FILE *input, int n)
 /* reads n bytes (0 <= n <= 4) from the input stream */
 {
     unsigned int m = 0;
     int i;
 
     for ( i=0; i<n; i++ )
-    m = (m << 8) | mygetc(in);
+    m = (m << 8) | mygetc(input);
     return m;
 
 }
 
 int
-read_marker(FILE *in, int *mkp)
+read_marker(FILE *input, int *mkp)
 /* reads a marker from the next two bytes in the input stream */
 {
-    unsigned int m, ct=0;
+    unsigned int m;
 
-    m = read_n_bytes(in, 2);
-    if ( feof(in) ) return EOF;
+    m = read_n_bytes(input, 2);
+    if ( feof(input) ) return EOF;
     if ( (m & 0xFF00) != 0xFF00 )  {
         fprintf(stderr,"read_marker: Expected marker, got %04x\n",m);
         exit(10);
@@ -350,16 +350,16 @@ read_jpegls_frame(FILE *in, jpeg_ls_header *jp)
 
 
 /* reads the JPEG-LS scan marker (not including marker head) */
-int read_jpegls_scan(FILE *in, jpeg_ls_header *jp)
+int read_jpegls_scan(FILE *input, jpeg_ls_header *jp)
 {
     int i, marker_len,
     comp, ct=0;
          
 
-    marker_len = read_n_bytes(in, 2);
+    marker_len = read_n_bytes(input, 2);
     ct += 2;
 
-    comp = read_n_bytes(in, 1);
+    comp = read_n_bytes(input, 1);
     ct += 1;
     check_range(comp, "scan components", 1, 4);
 
@@ -369,9 +369,9 @@ int read_jpegls_scan(FILE *in, jpeg_ls_header *jp)
     for ( i=0; i<comp; i++ ) {
     int cid, tm;
 
-    cid = read_n_bytes(in, 1); /* component identifier */
+    cid = read_n_bytes(input, 1); /* component identifier */
     ct += 1;
-    tm = read_n_bytes(in, 1);  /* table identifier */
+    tm = read_n_bytes(input, 1);  /* table identifier */
     ct += 1;
 
     if ( tm ) {
@@ -381,11 +381,11 @@ int read_jpegls_scan(FILE *in, jpeg_ls_header *jp)
     jp->comp_ids[i] = cid;
     }
 
-    jp->NEAR = read_n_bytes(in, 1);
+    jp->NEAR = read_n_bytes(input, 1);
     ct += 1;
     check_range(jp->NEAR,"NEAR", 0, 255);
 
-    jp->color_mode = read_n_bytes(in, 1);
+    jp->color_mode = read_n_bytes(input, 1);
     ct += 1;
     check_range(jp->color_mode, "INTERLEAVE", 0, 2);
 
@@ -406,11 +406,11 @@ int read_jpegls_scan(FILE *in, jpeg_ls_header *jp)
     }
 
 
-    jp->shift = read_n_bytes(in, 1);
+    jp->shift = read_n_bytes(input, 1);
     ct += 1;
     check_range(jp->shift, "SHIFT", 0, 15);
 
-    if ( myfeof(in) ) {
+    if ( myfeof(input) ) {
     fprintf(stderr,"read_jpegls_scan: EOF while reading frame marker\n");
     return EOF;
     }

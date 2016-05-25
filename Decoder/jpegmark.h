@@ -53,29 +53,29 @@
 
 #define BUFINPUT
 #ifndef BIG_ENDIAN
-#	define BIG_ENDIAN
+#   define BIG_ENDIAN
 #endif
 
 /*  Marker identifiers */
 
-#define	SOI		0xFFD8	/* start of image */
-#define EOI		0xFFD9	/* end of image */
+#define SOI     0xFFD8  /* start of image */
+#define EOI     0xFFD9  /* end of image */
 
-#define SOS		0xFFDA  /* Start of scan */
-#define DNL		0xFFDC  /* Define number of lines */
-#define DRI		0xFFDD  /* Define restart interval */
-#define RSTm	0xFFD0  /* Restart marker (FFD0-FFD7) */
-#define COM		0xFFFE	/* Comment */
+#define SOS     0xFFDA  /* Start of scan */
+#define DNL     0xFFDC  /* Define number of lines */
+#define DRI     0xFFDD  /* Define restart interval */
+#define RSTm    0xFFD0  /* Restart marker (FFD0-FFD7) */
+#define COM     0xFFFE  /* Comment */
 
 
 /* JPEG-LS specific */
-#define SOF_LS			0xFFF7	/* Start of JPEG-LS regular frame */
-#define LSE				0xFFF8	/* JPEG-LS extension marker */
-#define LSE_PARAMS		1		/* Marker type within LSE - parameters */
-#define LSE_MAPTABLE	2		/* Marker type within LSE - map tables */
-#define LSE_XMAPTABLE	3		/* Marker type within LSE - map table 
-									continuation */
-#define LSE_XY	        4       /* Marker type within LSE - image dimensions */
+#define SOF_LS          0xFFF7  /* Start of JPEG-LS regular frame */
+#define LSE             0xFFF8  /* JPEG-LS extension marker */
+#define LSE_PARAMS      1       /* Marker type within LSE - parameters */
+#define LSE_MAPTABLE    2       /* Marker type within LSE - map tables */
+#define LSE_XMAPTABLE   3       /* Marker type within LSE - map table 
+                                    continuation */
+#define LSE_XY          4       /* Marker type within LSE - image dimensions */
 
 
 /* Functions to write markers */
@@ -94,3 +94,4 @@ int seek_marker(FILE *in, int *mkp);
 int read_jpegls_frame(FILE *in, jpeg_ls_header *jp);
 int read_jpegls_scan(FILE *in, jpeg_ls_header *jp);
 int read_jpegls_extmarker(FILE *in, jpeg_ls_header *jp);
+int read_jpegls_restartmarker(FILE *in, jpeg_ls_header *jp);
