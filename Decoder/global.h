@@ -331,18 +331,16 @@ extern int	N[TOT_CONTEXTS],
 void error(char *msg);
 void *safealloc(size_t size);
 void *safecalloc(size_t numels, size_t size);
+void set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p);
+void check_compatibility(jpeg_ls_header *head_frame, jpeg_ls_header *head_scan, int n_s);
+double get_utime();
 
 /* scanline.c */
 void prepareLUTs();
 void init_stats(int);
-void doscanline(pixel *psl, pixel *sl, int no, int color);
-int undoscanline(pixel *psl, pixel *sl, int no, int color);
-void doscanline_pixel(pixel *psl, pixel *sl, int no);
-int undoscanline_pixel(pixel *psl, pixel *sl, int no);
 
 /* bitio.c */
 void bitiinit();
-void bitflush();
 void createzeroLUT();
 void buffinit(FILE *);
 
@@ -355,6 +353,13 @@ int  process_run_dec(int,int);
 void prepareLUTs();
 void prepare_qtables(int, int);
 void init_stats(int);
+
+/* lossless_d.c */
+int lossless_undoscanline(pixel *psl, pixel *sl, int no, int color);
+int lossy_undoscanline(pixel *psl, pixel *sl, int no, int color);
+int lossless_undoscanline_pixel(pixel *psl, pixel *sl, int no);
+int lossy_undoscanline_pixel(pixel *psl, pixel *sl, int no);
+
 
 #ifdef BIG_ENDIAN
 #    define ENDIAN8(x)   (x)

@@ -54,6 +54,7 @@
 #include "global.h"
 #include <string.h>
 #include "jpegmark.h"
+#include "bitio.h"
 
 #define  PGMNAME PGMPREFIX "d"
 #define  EPGMNAME PGMPREFIX "e"
@@ -220,12 +221,7 @@ __inline void write_one_line(pixel* line, int cols, FILE* outfile)
             exit(0);
         }
     }
-
-
 }
-
-
-
 
 
 void initbuffers(int multi, int comp) {
@@ -263,7 +259,7 @@ void initbuffers(int multi, int comp) {
 
 }
 
-swaplines()
+void swaplines()
 {
     pixel *temp;
     temp = pscanl0;
@@ -273,7 +269,7 @@ swaplines()
     cscanline = cscanl0 + components*(LEFTMARGIN-1);
 }
 
-c_swaplines(int i)
+void c_swaplines(int i)
 {
     pixel *temp;
     temp = c_pscanl0[i];
@@ -864,24 +860,21 @@ int initialize(int argc, char *argv[]) {
 int main (int argc, char *argv[]) {
     int n,n_c,n_r,my_i,n_s,mk,seek_return;
     int found_EOF = 0;
-    double t0, t1, get_utime();
-    long pos0, pos1,    
+    double t0, t1;
+    long pos0, pos1,
         tot_in = 0,
         tot_out = 0;
     pixel *local_scanl0,*local_scanl1,*local_pscanline,*local_cscanline;
     int MCUs_counted;
     msgfile = stdout;
 
-    
     /* Parse the parameters, initialize */
     /* Not yet fully implemented */
     bufiinit();
     pos0 = initialize(argc, argv); 
 
-
     /* start timer (must be AFTER initialize()) */
     t0 = get_utime();
-
 
     /* Initialize the scanline buffers */
     if (!multi)
