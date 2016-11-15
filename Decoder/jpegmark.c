@@ -159,12 +159,11 @@ write_jpegls_frame(FILE *output, jpeg_ls_header *jp)
     return ct;
 }
 
-int
-write_jpegls_scan(FILE *out, jpeg_ls_header *jp)
+int write_jpegls_scan(FILE *l_out, jpeg_ls_header *jp)
 {
     int i, marker_len, ct=0;
-         
-    ct += write_marker(out, SOS);   /* write JPEG-LS scan marker */
+
+    ct += write_marker(l_out, SOS);   /* write JPEG-LS scan marker */
 
     check_range(jp->comp, "scan components", 1, 4);
 
@@ -182,42 +181,40 @@ write_jpegls_scan(FILE *out, jpeg_ls_header *jp)
 
     marker_len = 6 + 2*jp->comp;
 
-    ct += write_n_bytes(out, marker_len, 2); /* write marker length */
-    ct += write_n_bytes(out, jp->comp, 1);   /* # of components for the scan */
+    ct += write_n_bytes(l_out, marker_len, 2); /* write marker length */
+    ct += write_n_bytes(l_out, jp->comp, 1);   /* # of components for the scan */
 
     /* write 2 bytes per component */
     for ( i=0; i<jp->comp; i++ ) {
-    ct += write_n_bytes(out, jp->comp_ids[i], 1); /* component identifier */
-    ct += write_n_bytes(out, 0, 1);   /* no tables in this implementation */
+    ct += write_n_bytes(l_out, jp->comp_ids[i], 1); /* component identifier */
+    ct += write_n_bytes(l_out, 0, 1);   /* no tables in this implementation */
     }
 
     check_range(jp->NEAR, "NEAR", 0, 255);
-    ct += write_n_bytes(out, jp->NEAR, 1);
+    ct += write_n_bytes(l_out, jp->NEAR, 1);
 
     check_range(jp->color_mode,"INTERLEAVE", 0, 2);
-    ct += write_n_bytes(out, jp->color_mode, 1);
+    ct += write_n_bytes(l_out, jp->color_mode, 1);
 
     check_range(jp->shift, "SHIFT", 0, 15);
-    ct += write_n_bytes(out, jp->shift, 1);
+    ct += write_n_bytes(l_out, jp->shift, 1);
 
     return ct;
 }
 
 
-int
-write_jpegls_extmarker(FILE *out, jpeg_ls_header *jp)
+int write_jpegls_extmarker(FILE *l_out, jpeg_ls_header *jp)
 {
-    int ct=0;
+    int ct = write_marker(l_out, LSE);   /* write JPEG-LS extended marker id */
 
-    ct += write_marker(out, LSE);   /* write JPEG-LS extended marker id */
+    ct += write_n_bytes(l_out, 13, 2); /* marker length */
+    ct += write_n_bytes(l_out,  LSE_PARAMS, 1); /* ext marker id */
+    ct += write_n_bytes(l_out, jp->alp-1, 2);  /* MAXVAL */
+    ct += write_n_bytes(l_out, jp->T1, 2);
+    ct += write_n_bytes(l_out, jp->T2, 2);
+    ct += write_n_bytes(l_out, jp->T3, 2);
+    ct += write_n_bytes(l_out, jp->RES, 2);
 
-    ct += write_n_bytes(out, 13, 2); /* marker length */
-    ct += write_n_bytes(out,  LSE_PARAMS, 1); /* ext marker id */
-    ct += write_n_bytes(out, jp->alp-1, 2);  /* MAXVAL */
-    ct += write_n_bytes(out, jp->T1, 2); 
-    ct += write_n_bytes(out, jp->T2, 2); 
-    ct += write_n_bytes(out, jp->T3, 2); 
-    ct += write_n_bytes(out, jp->RES, 2);
     return ct;
 }
 
@@ -279,7 +276,7 @@ read_marker(FILE *input, int *mkp)
 }
 
 int
-read_jpegls_frame(FILE *in, jpeg_ls_header *jp)
+read_jpegls_frame(FILE *l_in, jpeg_ls_header *jp)
 /* reads the JPEG-LS frame marker (not including marker head) */
 {
     int i,
@@ -290,24 +287,24 @@ read_jpegls_frame(FILE *in, jpeg_ls_header *jp)
     ct = 0;
 
     /* Read Marker Length */
-    marker_len = read_n_bytes(in, 2);
+    marker_len = read_n_bytes(l_in, 2);
     ct += 2;
 
     /* Read the bits per pixel */
-    bpp = read_n_bytes(in, 1);
+    bpp = read_n_bytes(l_in, 1);
     ct ++;
 
     check_range(bpp,"bpp",2,16);
     jp->alp = 1<<bpp;
 
     /* Read the rows and columns */
-    jp->rows = read_n_bytes(in, 2);
+    jp->rows = read_n_bytes(l_in, 2);
     ct += 2;
-    jp->columns = read_n_bytes(in, 2);
+    jp->columns = read_n_bytes(l_in, 2);
     ct += 2;
     
     /* Read component information */
-    comp = read_n_bytes(in, 1);
+    comp = read_n_bytes(l_in, 1);
     ct += 1;
     check_range(comp,"COMP",1,255);
     jp->comp = comp;
@@ -316,11 +313,11 @@ read_jpegls_frame(FILE *in, jpeg_ls_header *jp)
     {
         int sx, sy, cid;
 
-        cid = read_n_bytes(in, 1);
+        cid = read_n_bytes(l_in, 1);
         ct += 1;
-        sx = read_n_bytes(in, 1);
+        sx = read_n_bytes(l_in, 1);
         ct += 1;
-        tq = read_n_bytes(in, 1);
+        tq = read_n_bytes(l_in, 1);
         ct += 1;
         check_range(tq,"Tq",0,0);
         sy = sx & 0x0f;
@@ -333,7 +330,7 @@ read_jpegls_frame(FILE *in, jpeg_ls_header *jp)
     }
 
     /* Check for errors */
-    if ( myfeof(in) ) 
+    if ( myfeof(l_in) )
     {
         fprintf(stderr,"read_jpegls_frame: EOF while reading frame marker\n");
         return EOF;
@@ -425,7 +422,7 @@ int read_jpegls_scan(FILE *input, jpeg_ls_header *jp)
 
 /* reads the JPEG-LS extension marker (not including marker head) */
 /* Supports non-default type (1) and mapping table type (2) */
-int read_jpegls_extmarker(FILE *in, jpeg_ls_header *jp)
+int read_jpegls_extmarker(FILE *l_in, jpeg_ls_header *jp)
 
 {
     int marker_len,     /* marker length */
@@ -438,11 +435,11 @@ int read_jpegls_extmarker(FILE *in, jpeg_ls_header *jp)
     int i;
 
     /* Read marker length */
-    marker_len = read_n_bytes(in, 2); /* marker length */
+    marker_len = read_n_bytes(l_in, 2); /* marker length */
     ct += 2;
 
     /* Read id type */
-    IDtype = read_n_bytes(in,  1);
+    IDtype = read_n_bytes(l_in,  1);
     ct += 1;
 
     /* For Type 1 - non default parameters */
@@ -455,19 +452,19 @@ int read_jpegls_extmarker(FILE *in, jpeg_ls_header *jp)
         }
 
         /* read maxval */
-        maxval = read_n_bytes(in, 2);
+        maxval = read_n_bytes(l_in, 2);
         ct += 2;
         jp->alp = maxval +1;
 
         /* read thresholds and reset */
-        jp->T1 = read_n_bytes(in, 2);
+        jp->T1 = read_n_bytes(l_in, 2);
         ct += 2;
-        jp->T2 = read_n_bytes(in, 2);
-        jp->T3 = read_n_bytes(in, 2);
-        jp->RES = read_n_bytes(in, 2);
+        jp->T2 = read_n_bytes(l_in, 2);
+        jp->T3 = read_n_bytes(l_in, 2);
+        jp->RES = read_n_bytes(l_in, 2);
         ct += 6;
 
-        if ( myfeof(in) ) {
+        if ( myfeof(l_in) ) {
             fprintf(stderr,"read_jpegls_extmarker: EOF while reading frame marker\n");
             return EOF;
         }
@@ -483,11 +480,11 @@ int read_jpegls_extmarker(FILE *in, jpeg_ls_header *jp)
         jp->need_table = 1;
 
         /* Read table ID */
-        jp->TID = TID = read_n_bytes(in, 1);
+        jp->TID = TID = read_n_bytes(l_in, 1);
         ct += 1;
 
         /* Read width of table entry */
-        jp->Wt = Wt = read_n_bytes(in, 1);
+        jp->Wt = Wt = read_n_bytes(l_in, 1);
         if (Wt<=0 || Wt>3)
         {   
             fprintf(stderr, "Width of mapping table entries must be either 1,2 or 3 in this implementation. Sorry!\n");
@@ -502,7 +499,7 @@ int read_jpegls_extmarker(FILE *in, jpeg_ls_header *jp)
         jp->TABLE[TID] = (unsigned int *)safecalloc((MAXTAB+1)*sizeof(int), 1);
         for (i=0; i<=MAXTAB; i++)
         {
-            jp->TABLE[TID][i] = read_n_bytes(in, Wt);
+            jp->TABLE[TID][i] = read_n_bytes(l_in, Wt);
         }
         ct += ((MAXTAB+1) * Wt);
 
@@ -517,22 +514,19 @@ int read_jpegls_extmarker(FILE *in, jpeg_ls_header *jp)
 }
 
 
-
-
-
 /* Read DRI restart marker */
-int read_jpegls_restartmarker(FILE *in, jpeg_ls_header *jp)
+int read_jpegls_restartmarker(FILE *l_in, jpeg_ls_header *jp)
 {
     int ct = 0;
     int marker_len;     /* the marker length */
     int Ri;             /* the restart interval */
 
     /* Read marker length */
-    marker_len = read_n_bytes(in, 2);
+    marker_len = read_n_bytes(l_in, 2);
     ct += 2;
 
     /* Read the restart interval */
-    Ri = read_n_bytes(in, marker_len - 2);
+    Ri = read_n_bytes(l_in, marker_len - 2);
     ct += (marker_len - 2);
 
     jp->restart_interval = Ri;

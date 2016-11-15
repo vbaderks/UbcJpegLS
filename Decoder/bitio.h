@@ -126,6 +126,7 @@ extern byte fillinbuff(FILE *fil);
 /* Initializes the bit input routines */
 extern void bitiinit();
 
+extern void bitiflush();
 
 /* creates the bit counting look-up table. */
 extern void createzeroLUT();

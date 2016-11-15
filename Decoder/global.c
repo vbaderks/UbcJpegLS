@@ -92,7 +92,7 @@ int quant,          /* quantization = 2*NEAR+1 */
     alpha1eps;       /* alpha-1+NEAR */
 
 int NEAR = DEF_NEAR;    /* loss tolerance per symbol, fixed at 0 for lossless */
-int bpp,    /* bits per sample */
+int g_bpp,    /* bits per sample */
     qbpp,   /* bits per sample for quantized prediction errors */
     limit,  /* limit for unary part of Golomb code */
     limit_reduce;  /* reduction on above for EOR states */
@@ -145,69 +145,70 @@ double get_utime()
 
 
 /* Set thresholds to default unless specified by header: */
-void set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p)
+void set_thresholds(int alfa, int near, int *T1p, int *T2p, int *T3p)
 {
     int lambda,
         ilambda = 256/alfa,
-        quant = 2*NEAR+1,
-        T1 = *T1p, 
-        T2 = *T2p, 
-        T3 = *T3p;
+        t1 = *T1p, 
+        t2 = *T2p, 
+        t3 = *T3p;
     
-    if (alfa<4096)
-       lambda = (alfa+127)/256;
-        else
-       lambda = (4096+127)/256;
+    if (alfa < 4096) {
+        lambda = (alfa + 127) / 256;
+    }
+    else {
+        lambda = (4096 + 127) / 256;
+    }
 
-    if ( T1 <= 0 )  {
+    if ( t1 <= 0 ) {
         /* compute lossless default */
         if ( lambda ) 
-            T1 = lambda*(BASIC_T1 - 2) + 2;
+            t1 = lambda*(BASIC_T1 - 2) + 2;
         else {  /* alphabet < 8 bits */
-            T1 = BASIC_T1/ilambda;
-            if ( T1 < 2 ) T1 = 2;
+            t1 = BASIC_T1/ilambda;
+            if ( t1 < 2 ) t1 = 2;
         }
         /* adjust for lossy */
-        T1 += 3*NEAR;
+        t1 += 3*near;
 
         /* check that the default threshold is in bounds */
-        if ( T1 < NEAR+1 || T1 > (alfa-1) ) 
-             T1 = NEAR+1;         /* eliminates the threshold */
+        if ( t1 < near+1 || t1 > (alfa-1) ) 
+             t1 = near+1;         /* eliminates the threshold */
     }
-    if ( T2 <= 0 )  {
+    if ( t2 <= 0 ) {
         /* compute lossless default */
         if ( lambda ) 
-            T2 = lambda*(BASIC_T2 - 3) + 3;
+            t2 = lambda*(BASIC_T2 - 3) + 3;
         else {
-            T2 = BASIC_T2/ilambda;
-            if ( T2 < 3 ) T2 = 3;
+            t2 = BASIC_T2/ilambda;
+            if ( t2 < 3 ) t2 = 3;
         }
         /* adjust for lossy */
-        T2 += 5*NEAR;
+        t2 += 5*near;
 
         /* check that the default threshold is in bounds */
-        if ( T2 < T1 || T2 > (alfa-1) ) 
-             T2 = T1;         /* eliminates the threshold */
+        if ( t2 < t1 || t2 > (alfa-1) ) 
+             t2 = t1;         /* eliminates the threshold */
     }
-    if ( T3 <= 0 )  {
+    if ( t3 <= 0 )  {
         /* compute lossless default */
         if ( lambda ) 
-            T3 = lambda*(BASIC_T3 - 4) + 4;
+            t3 = lambda*(BASIC_T3 - 4) + 4;
         else {
-            T3 = BASIC_T3/ilambda;
-            if ( T3 < 4 ) T3 = 4;
+            t3 = BASIC_T3/ilambda;
+            if ( t3 < 4 ) t3 = 4;
         }
         /* adjust for lossy */
-        T3 += 7*NEAR;
+        t3 += 7*near;
 
         /* check that the default threshold is in bounds */
-        if ( T3 < T2 || T3 > (alfa-1) ) 
-             T3 = T2;         /* eliminates the threshold */
+        if ( t3 < t2 || t3 > (alfa-1) ) 
+             t3 = t2;         /* eliminates the threshold */
     }
 
-    *T1p = T1;
-    *T2p = T2;
-    *T3p = T3;
+    *T1p = t1;
+    *T2p = t2;
+    *T3p = t3;
 }
 
 
@@ -312,31 +313,35 @@ char *ttyfilename = "CON";
 
 #define PAUSE   20
 
-void fprint_disclaimer(FILE *fp, int nopause)
+void fprint_disclaimer(FILE *fp, int l_nopause)
 {
     char *p0, *p1;
-    FILE *ttyf;
+    FILE *ttyf = NULL;
     int  i, c;
 
-    nopause = nopause | !_isatty(_fileno(fp));
+    l_nopause = l_nopause | !_isatty(_fileno(fp));
 
-    if ( !nopause && (ttyf=fopen(ttyfilename,"r"))==NULL ) {
-    nopause = 1;
+    if ( !l_nopause && (ttyf=fopen(ttyfilename,"r"))==NULL ) {
+        l_nopause = 1;
     }
 
     for ( i=1, p0=disclaimer; ; i++ ) {
-    if ( !(*p0)  ) break;
-    if ( !nopause && i%PAUSE==0 ) {
-        fflush(fp);
-        fprintf(stderr, "--- (press RETURN to continue) ---"); 
-        fflush(stderr);
-        c = getc(ttyf);
-    }
-    for ( p1=p0; (*p1 != '\n') && (*p1 != 0); p1++ );
-    *p1 = 0;
-    fprintf(fp,"%s\n",p0);
-    p0 = p1+1;
+        if ( !(*p0)  )
+            break;
+
+        if ( !l_nopause && i%PAUSE==0 ) {
+            fflush(fp);
+            fprintf(stderr, "--- (press RETURN to continue) ---"); 
+            fflush(stderr);
+            c = getc(ttyf);
+        }
+        for ( p1=p0; (*p1 != '\n') && (*p1 != 0); p1++ );
+        *p1 = 0;
+        fprintf(fp,"%s\n",p0);
+        p0 = p1+1;
     }
     fprintf(fp,"\n"); fflush(fp);
-    if ( !nopause) fclose(ttyf);
+    if (!l_nopause) {
+        fclose(ttyf);
+    }
 }

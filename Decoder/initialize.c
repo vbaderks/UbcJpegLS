@@ -181,24 +181,20 @@ void prepareLUTs()
         j++ ;    /* next class number */
         classmap[i] = sgn*j;
         classmap[ineg] = -sgn*j;
-
     }
-
 }
 
 
-
-
-
-
 /* prepare quantization tables for near-lossless quantization */
-void prepare_qtables(int absize, int NEAR)
+void prepare_qtables(int absize, int near)
 {
-    int diff, qdiff;
-    int beta, quant;
+    int diff;
+    int qdiff;
+    int l_beta;
+    int l_quant;
 
-    quant = 2*NEAR+1;
-    beta = absize;
+    l_quant = 2 * near + 1;
+    l_beta = absize;
 
     if ( (qdiv0 = (int *)calloc(2*absize-1,sizeof(int)))==NULL ) {
         perror("qdiv  table");
@@ -206,21 +202,21 @@ void prepare_qtables(int absize, int NEAR)
     }
     qdiv = qdiv0+absize-1;
 
-    if ( (qmul0 = (int *)calloc(2*beta-1,sizeof(int)))==NULL ) {
+    if ( (qmul0 = (int *)calloc(2 * l_beta-1, sizeof(int)))==NULL ) {
         perror("qmul  table");
         exit(10);
     }
-    qmul = qmul0+beta-1;
+    qmul = qmul0+l_beta-1;
 
     for ( diff = -(absize-1); diff<absize; diff++ ) {
         if ( diff<0 )
-            qdiff = - ( (NEAR-diff)/quant );
+            qdiff = - ( (near-diff)/l_quant );
         else
-            qdiff = ( NEAR + diff )/quant;
+            qdiff = ( near + diff )/l_quant;
         qdiv[diff] = qdiff;
     }
-    for ( qdiff = -(beta-1); qdiff<beta; qdiff++ ) {
-        diff = quant*qdiff;
+    for ( qdiff = -(l_beta-1); qdiff<l_beta; qdiff++ ) {
+        diff = l_quant*qdiff;
         qmul[qdiff] = diff;
     }
 }

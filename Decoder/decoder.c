@@ -95,7 +95,7 @@ int got_lse;            /* got an LSE marker */
 int got_table;          /* got a mapping table */
 int got_restart;        /* got a restart marker indicatino */
 int restart_interval;   /* the restart interval */
-int multi;          /* if the files are separate */
+int multi;              /* if the files are separate */
 int application_header; /* application bytes in the header */
 
 int lossy;                      /* Indicates if in lossy mode or not */
@@ -129,7 +129,6 @@ int     highmask;
 /* Write one row of pixel values */
 __inline void write_one_line(pixel* line, int cols, FILE* outfile)
 {
-
     int i, index;
     unsigned int* maptable;
             
@@ -224,11 +223,11 @@ __inline void write_one_line(pixel* line, int cols, FILE* outfile)
 }
 
 
-void initbuffers(int multi, int comp) {
-
+void initbuffers(int multi_output, int comp)
+{
     int i;
 
-    if (multi)      /* Output to several files */
+    if (multi_output)      /* Output to several files */
 
       for (i=0;i<comp;i++) {
 
@@ -256,7 +255,6 @@ void initbuffers(int multi, int comp) {
     }
 
     createzeroLUT();
-
 }
 
 void swaplines()
@@ -279,19 +277,19 @@ void c_swaplines(int i)
     c_cscanline[i] = c_cscanl0[i] + (LEFTMARGIN-1);
 }
 
-void closebuffers(int multi) {
-
-    int     i;
+void closebuffers(int multi_output)
+{
+    int i;
 
     fclose(in);
-    if (multi==0)
+    if (multi_output == 0)
        fclose(out);
-        else
-           for (i=0;i<components;i++)
+    else
+        for (i=0;i<components;i++)
            fclose(c_out[i]);
 
-        free(pscanl0);
-        free(cscanl0);
+    free(pscanl0);
+    free(cscanl0);
 }
 
 
@@ -565,7 +563,7 @@ int initialize(int argc, char *argv[]) {
     }
 
     if ((multi) && (out_files) && (out_files!=components)) {
-        fprintf(stderr,"ERROR: Number of files, %d%, for output must be equal to number of image components, %d\n",out_files,components);
+        fprintf(stderr,"ERROR: Number of files, %d, for output must be equal to number of image components, %d\n",out_files,components);
         exit(10);
     }
 
@@ -707,21 +705,21 @@ int initialize(int argc, char *argv[]) {
     }
 
     /* compute bits per sample for input symbols */
-    for ( bpp=1; (1L<<bpp)<alpha; bpp++ );
+    for ( g_bpp = 1; (1L << g_bpp) < alpha; g_bpp++ );
 
     /* compute bits per sample for unencoded prediction errors */
     if (lossy==TRUE)
         for ( qbpp=1; (1L<<qbpp)<qbeta; qbpp++ );
     else
-        qbpp = bpp;
+        qbpp = g_bpp;
 
-    if ( bpp < 2 ) bpp = 2;
+    if ( g_bpp < 2 ) g_bpp = 2;
 
     /* limit for unary part of Golomb code */
-    if ( bpp < 8 )
-        limit = 2*(bpp + 8) - qbpp -1;
+    if ( g_bpp < 8 )
+        limit = 2*(g_bpp + 8) - qbpp -1;
     else
-        limit = 4*bpp - qbpp - 1;   
+        limit = 4* g_bpp - qbpp - 1;
 
     /* print out parameters */
     if ( verbose ) {
@@ -848,11 +846,7 @@ int initialize(int argc, char *argv[]) {
 
     /* return size of the header, in bytes */
     return pos;
-
 }
-
-
-
 
 
 /* Main loop for decoding files */
@@ -864,7 +858,9 @@ int main (int argc, char *argv[]) {
     long pos0, pos1,
         tot_in = 0,
         tot_out = 0;
-    pixel *local_scanl0,*local_scanl1,*local_pscanline,*local_cscanline;
+    pixel *local_scanl0, *local_scanl1;
+    pixel *local_pscanline = NULL;
+    pixel *local_cscanline = NULL;
     int MCUs_counted;
     msgfile = stdout;
 

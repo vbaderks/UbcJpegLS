@@ -178,21 +178,21 @@ extern int      highmask;  /* for powers of 2, a mask for high bits */
 
 
 
-extern int  bpp,    /* bits per sample */
-			qbpp,   /* bits per sample for quantized prediction errors */
-			limit,  /* limit for unary part of Golomb code */
-			limit_reduce;  /* reduction on above for EOR states */
+extern int  g_bpp;    /* bits per sample */
+extern int  qbpp;   /* bits per sample for quantized prediction errors */
+extern int  limit;  /* limit for unary part of Golomb code */
+extern int  limit_reduce;  /* reduction on above for EOR states */
 
 
 #define DEF_NEAR	0
 
 /* for LOSSY mode */
-extern  int	quant, 
-			beta, 
-			qbeta,
-			ceil_half_qbeta,
-			negNEAR,
-			alpha1eps;
+extern  int quant;
+extern  int beta;
+extern  int qbeta;
+extern  int ceil_half_qbeta;
+extern  int negNEAR;
+extern  int alpha1eps;
 
 /* loss tolerance */
 extern int NEAR;
