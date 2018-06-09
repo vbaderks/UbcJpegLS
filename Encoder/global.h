@@ -50,12 +50,14 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#pragma once
 
 #ifndef GLOBAL_H
 #define GLOBAL_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 #ifndef CLOCKS_PER_SEC
 #define CLOCKS_PER_SEC 10e6
@@ -73,62 +75,62 @@
 
 
 /* Version number */
-#define JPEGLSVERSION	"V.2.1"
+#define JPEGLSVERSION   "V.2.1"
 
 
 /* Maximal number of components in the implementation*/
-#define MAX_COMPONENTS	6   
-#define MAX_SCANS	MAX_COMPONENTS 
+#define MAX_COMPONENTS  6   
+#define MAX_SCANS   MAX_COMPONENTS 
 
 
 /* For 1st component of plane interl. mode */
-#define FIRST		1	
+#define FIRST       1
 
 
 /* Different colour modes */
-#define PLANE_INT	0
-#define LINE_INT	1
-#define PIXEL_INT	2
+#define PLANE_INT   0
+#define LINE_INT    1
+#define PIXEL_INT   2
 
 #define DEFAULT_COLOR_MODE LINE_INT
 
-extern char	*plane_int_string,
-		*line_int_string,
-		*pixel_int_string;
+extern char *plane_int_string,
+        *line_int_string,
+        *pixel_int_string;
 
 
-#define BIG_ENDIAN	1
+#define BIG_ENDIAN  1
 
-typedef struct	jpeg_ls {
+typedef struct jpeg_ls {
 
-	int	columns,					/* The number of columns */
-		rows,						/* Number of rows */
-		alp,						/* alphabet size (Max+1) , 2 bytes*/
-		comp,						/* number of components, 1 byte  */
-		NEAR,						/* near-lossless error, 1 byte  */
-		color_mode,					/* indicates the color mode , 1 byte */
-		need_lse,					/* Indicates non-default parameters */
-		need_table,					/* Indicates use of mapping table */
-		need_restart,				/* Indicates use of restart markers */
-		restart_interval,			/* The number of MCU's between restart markers */
-		shift,						/* for sparse images, 1 byte */
-		T1,T2,T3,					/* Thresholds, 2 bytes each */
-		RES,						/* reset value for counters, 2 bytes */
-		samplingx[MAX_COMPONENTS],	/* col. sampling rates 1 byte each*/
-		samplingy[MAX_COMPONENTS],	/* row sampling rates */
-		comp_ids[MAX_COMPONENTS],	/* component id's */
-		acc_size,			/* 1 byte */
-		adds[MAX_COMPONENTS];		/* size given by acc_size */
-	unsigned int	TID,				/* Table ID, 1 byte */
-	        	Wt,				/* Width of each table entry, 1 byte */
-	                *TABLE[MAX_COMPONENTS];		/* The table(s) for each component */
+    int columns,                    /* The number of columns */
+        rows,                       /* Number of rows */
+        alp,                        /* alphabet size (Max+1) , 2 bytes*/
+        comp,                       /* number of components, 1 byte  */
+        NEAR,                       /* near-lossless error, 1 byte  */
+        color_mode,                 /* indicates the color mode , 1 byte */
+        need_lse,                   /* Indicates non-default parameters */
+        need_table,                 /* Indicates use of mapping table */
+        need_restart,               /* Indicates use of restart markers */
+        restart_interval,           /* The number of MCU's between restart markers */
+        shift,                      /* for sparse images, 1 byte */
+        T1,T2,T3,                   /* Thresholds, 2 bytes each */
+        RES,                        /* reset value for counters, 2 bytes */
+        samplingx[MAX_COMPONENTS],  /* col. sampling rates 1 byte each*/
+        samplingy[MAX_COMPONENTS],  /* row sampling rates */
+        comp_ids[MAX_COMPONENTS],   /* component id's */
+        acc_size,           /* 1 byte */
+        adds[MAX_COMPONENTS];       /* size given by acc_size */
+    unsigned int    TID,                /* Table ID, 1 byte */
+                Wt,             /* Width of each table entry, 1 byte */
+                    *TABLE[MAX_COMPONENTS];     /* The table(s) for each component */
 
 } jpeg_ls_header;
 
-extern int	components;
-extern int	sampling[MAX_COMPONENTS];
+extern int  components;
+extern int  sampling[MAX_COMPONENTS];
 
-#define NAME_LENGTH	40
+#define NAME_LENGTH 40
 
 /* Output file names */
 #define OUTFILE "outfile"
@@ -137,16 +139,16 @@ extern int	sampling[MAX_COMPONENTS];
 
 /* Define max and min macros */
 #ifndef max
-#	define max(a,b)  (((a)>=(b))?(a):(b))
-#	define min(a,b)  (((a)<=(b))?(a):(b))
+#   define max(a,b)  (((a)>=(b))?(a):(b))
+#   define min(a,b)  (((a)<=(b))?(a):(b))
 #endif
 
 
 /****** Constants */
 
 /* margins for scan lines */
-#define	LEFTMARGIN	2
-#define RIGHTMARGIN	1
+#define LEFTMARGIN  2
+#define RIGHTMARGIN 1
 
 
 extern char *disclaimer;
@@ -161,42 +163,40 @@ extern char *disclaimer;
 
 #ifdef FIXALPHA
 #  ifndef alpha
-#    define	alpha	256
+#    define alpha   256
 #  endif
-#  define 	highmask (-(alpha))
+#  define   highmask (-(alpha))
 #  ifndef POW2
-#	define POW2
+#   define POW2
 #  endif
 #  if (alpha!=2) && (alpha!=4) && (alpha!=8) && (alpha!=16) && (alpha!=32) &&\
      (alpha!=64) && ( alpha!=128) && (alpha!=256) && (alpha!=512) &&\
      (alpha!=1024) && ( alpha!=2048) && (alpha!=4096) && (alpha!=8192) &&\
      (alpha!=16384) && ( alpha!=32768) && (alpha!=65536)\
-#   	 error "Fixed alpha must be a power of 2"
+#        error "Fixed alpha must be a power of 2"
 #  endif
-#  define  	ceil_half_alpha (alpha/2)
+#  define   ceil_half_alpha (alpha/2)
 #else
 extern int      alpha;     /* alphabet size */
 extern int      ceil_half_alpha; /* ceil(alpha/2) */
 extern int      highmask;  /* for powers of 2, a mask for high bits */
 #endif
 
+extern int bpp,         /* bits per sample */
+       qbpp,        /* bits per sample for quantized prediction errors */
+           limit,       /* limit for unary part of Golomb code */
+       limit_reduce;    /* reduction on above for EOR states */
 
 
-extern int bpp,			/* bits per sample */
-	   qbpp,		/* bits per sample for quantized prediction errors */
-           limit,		/* limit for unary part of Golomb code */
-	   limit_reduce;	/* reduction on above for EOR states */
-
-
-#define DEF_NEAR	0
+#define DEF_NEAR    0
 
 /* for LOSSY mode */
-extern  int	quant, 
-			beta, 
-			qbeta,
-			ceil_half_qbeta,
-			negNEAR,
-			alpha1eps;
+extern  int quant, 
+            beta, 
+            qbeta,
+            ceil_half_qbeta,
+            negNEAR,
+            alpha1eps;
 
 /* loss tolerance */
 extern int NEAR;
@@ -205,19 +205,19 @@ extern int NEAR;
 /* Quantization threshold basic defaults */
 /* These are the defaults for LOSSLESS, 8 bpp. Defaults for other
    cases are derived from these basic values */
-#define	BASIC_T1	3
-#define	BASIC_T2	7
-#define	BASIC_T3	21
-#define	BASIC_Ta	5
+#define BASIC_T1    3
+#define BASIC_T2    7
+#define BASIC_T3    21
+#define BASIC_Ta    5
 
 #define CREGIONS (9)    /* quantization regions for d-b, b-c, c-a */
 
 /* run-length treshold */
 #ifndef MAXRUN
-#	define MAXRUN (64)
+#   define MAXRUN (64)
 #endif
 
-#define EOLINE	 1
+#define EOLINE   1
 #define NOEOLINE 0
 
 /* number of different contexts */
@@ -248,13 +248,11 @@ extern int NEAR;
 
 
 /* index of first end-of-run context */
-#define EOR_0	(CONTEXTS)
+#define EOR_0   (CONTEXTS)
 
 
 /* index of run state */
 #define RUNSTATE 0
-
-
 
 /*** offsets */
 
@@ -262,11 +260,11 @@ extern int NEAR;
 #define MAXCODELEN 24
 
 /* The stat initialization values */
-#define INITNSTAT 1			/* init value for N[] */
+#define INITNSTAT 1         /* init value for N[] */
 #define MIN_INITABSTAT 2    /* min init value for A[] */
 #define INITABSLACK 6       /* init value for A is roughly 
-							   2^(bpp-INITABSLACK) but not less than above */
-#define INITBIASTAT 0		/* init value for B[] */
+                               2^(bpp-INITABSLACK) but not less than above */
+#define INITBIASTAT 0       /* init value for B[] */
 
 /* Limit for unary code */
 #define LIMIT 23
@@ -277,13 +275,13 @@ extern int NEAR;
 
 #ifdef FIXRESET
 #   ifndef RESET
-#		define RESET     DEFAULT_RESET
+#       define RESET     DEFAULT_RESET
 #   endif
 #else
-extern int	RESET;
+extern int  RESET;
 #endif
 
-#define	reset	RESET          /* reset threshold */
+#define reset   RESET          /* reset threshold */
 
 #define RESRUN    256
 
@@ -300,16 +298,16 @@ typedef unsigned short pixel;
 
 /****** Global variables prototypes */
 
-extern FILE	*in, *out, *msgfile;
-extern FILE	*c_in[MAX_COMPONENTS];
-extern FILE	*c_out[MAX_COMPONENTS];
-extern int 	inhandle;
-extern int  	T1, T2, T3, Ta;
-extern int	verbose,
-		nopause,
-		nolegal;
+extern FILE *in, *out, *msgfile;
+extern FILE *c_in[MAX_COMPONENTS];
+extern FILE *c_out[MAX_COMPONENTS];
+extern int  inhandle;
+extern int      T1, T2, T3, Ta;
+extern int  verbose,
+        nopause,
+        nolegal;
 
-extern int bpp16;    		/* Indicates if 16 bits per pixel mode or not */
+extern int bpp16;           /* Indicates if 16 bits per pixel mode or not */
 extern int lossy;
 
 
@@ -319,13 +317,13 @@ extern int vLUT[3][2 * LUTMAX16];
 extern int lutmax;
 extern int classmap[CONTEXTS1];
 extern int *qdiv0, *qdiv,        /* quantization table (division via look-up) */
-    	   *qmul0, *qmul;        /* dequantization table */
+           *qmul0, *qmul;        /* dequantization table */
 
 /* statistics tables */
-extern int	N[TOT_CONTEXTS],
-			A[TOT_CONTEXTS],
-			B[TOT_CONTEXTS],
-			C[TOT_CONTEXTS];
+extern int  N[TOT_CONTEXTS],
+            A[TOT_CONTEXTS],
+            B[TOT_CONTEXTS],
+            C[TOT_CONTEXTS];
 
 
 /*extern byte getk[65][3000];*/
@@ -338,6 +336,8 @@ extern int	N[TOT_CONTEXTS],
 void error(char *msg);
 void *safealloc(size_t size);
 void *safecalloc(size_t numels, size_t size);
+int set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p);
+void check_compatibility(jpeg_ls_header *head_frame, jpeg_ls_header *head_scan, int n_s);
 
 /* lossless.c */
 void lossless_doscanline_pixel(pixel *psl, pixel *sl, int no);
@@ -355,14 +355,12 @@ void buffinit(FILE *);
 /*  melcode.c */
 void init_process_run(int);
 void close_process_run();
-int  process_run(int,int,int);
-
+void process_run(int,int,int);
 
 /* initialize.c */
 void prepareLUTs();
 void prepare_qtables(int, int);
 void init_stats(int);
-
 
 
 #ifdef BIG_ENDIAN
@@ -384,42 +382,42 @@ void init_stats(int);
 
 /* clipping macro */
 #ifdef POW2
-#	define clip(x,alpha) \
-	    if ( x & highmask ) {\
-	      if(x < 0) \
-			x = 0;\
-	      else \
-			x = alpha - 1;\
-	    }
+#   define clip(x,alpha) \
+        if ( x & highmask ) {\
+          if(x < 0) \
+            x = 0;\
+          else \
+            x = alpha - 1;\
+        }
 #else
-#	define clip(x,alpha) \
-	  if(x < 0)  \
-	    x = 0; \
-	  else if (x >= alpha) \
-	    x = alpha - 1;
+#   define clip(x,alpha) \
+      if(x < 0)  \
+        x = 0; \
+      else if (x >= alpha) \
+        x = alpha - 1;
 #endif  /* POW2 */ 
 
 
 
 /* macro to predict Px */
-#define predict(Rb, Ra, Rc)	\
-{	\
-	register pixel minx;	\
-	register pixel maxx;	\
-	\
-	if (Rb > Ra) {	\
-		minx = Ra;	\
-		maxx = Rb;	\
-	} else {	\
-		maxx = Ra;	\
-		minx = Rb;	\
-	}	\
-	if (Rc >= maxx)	\
-		Px = minx;	\
-	else if (Rc <= minx)	\
-		Px = maxx;	\
-	else	\
-		Px = Ra + Rb - Rc;	\
+#define predict(Rb, Ra, Rc) \
+{   \
+    register pixel minx;    \
+    register pixel maxx;    \
+    \
+    if (Rb > Ra) {  \
+        minx = Ra;  \
+        maxx = Rb;  \
+    } else {    \
+        maxx = Ra;  \
+        minx = Rb;  \
+    }   \
+    if (Rc >= maxx) \
+        Px = minx;  \
+    else if (Rc <= minx)    \
+        Px = maxx;  \
+    else    \
+        Px = Ra + Rb - Rc;  \
 }
 
 #endif

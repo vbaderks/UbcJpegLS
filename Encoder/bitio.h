@@ -51,16 +51,18 @@
  * David Cheng-Hsiu Chu, and Ismail R. Ismail march 1999
  */
 
+#pragma once
+
 #ifndef BITIO_H
 #define BITIO_H
 
-#include "global.h"
-
 /* BYTE I/O variables */
 #define BUFSIZE ((16*1024)-4) /* Size of input BYTE buffer */
+
 extern int fp;                /* index into byte  buffer */
 extern int truebufsize;       /* true size of byte buffer ( <= BUFSIZE) */
 extern byte negbuff[];        /* the buffer */
+
 #define buff (negbuff+4)
 
 
@@ -101,17 +103,17 @@ extern void bitoflush();
 
 #define put_ones(n)                                             \
 {                                                               \
-	if ( n < 24 ) {						\
-	    putbits((1<<n)-1,n);				\
-	}							\
-	else {							\
-	    register unsigned nn = n;				\
-	    while ( nn >= 24 ) {				\
-		putbits((1<<24)-1,24);				\
-		nn -= 24;					\
-	    }							\
-	    if ( nn ) putbits((1<<nn)-1,nn);			\
-	}							\
+    if ( n < 24 ) {                     \
+        putbits((1<<n)-1,n);                \
+    }                           \
+    else {                          \
+        register unsigned nn = n;               \
+        while ( nn >= 24 ) {                \
+        putbits((1<<24)-1,24);              \
+        nn -= 24;                   \
+        }                           \
+        if ( nn ) putbits((1<<nn)-1,nn);            \
+    }                           \
 }
 
 #define PUT_ONES(n) put_ones(n)
@@ -124,27 +126,27 @@ extern void bitoflush();
  */
 
 #define putbits(x, n)                                           \
-{								\
-	assert(n <= 24 && n >= 0 && ((1<<n)>x));		\
+{                               \
+    assert(n <= 24 && n >= 0 && ((1<<(n))>(x)));        \
         bits -= n;                                              \
-        reg |= x << bits;                                       \
-        while (bits <= 24) {                                   	\
-			register unsigned int outbyte;		\
-            if (fp >= BUFSIZE) {                       		\
-				fwrite(buff, 1, fp, out);       \
-				fp = 0;                         \
-			}                                       \
-            outbyte = (buff[fp++] = (reg >> 24) );		\
-			if ( outbyte == 0xff ) {		\
-				bits += 7;			\
-				reg <<= 7;			\
+        reg |= (x) << bits;                                       \
+        while (bits <= 24) {                                    \
+            register unsigned int outbyte;      \
+            if (fp >= BUFSIZE) {                            \
+                fwrite(buff, 1, fp, out);       \
+                fp = 0;                         \
+            }                                       \
+            outbyte = (buff[fp++] = (reg >> 24) );      \
+            if ( outbyte == 0xff ) {        \
+                bits += 7;          \
+                reg <<= 7;          \
                                 /* stuff a 0 at MSB */          \
-				reg &= ~(1<<(8*sizeof(reg)-1)); \
-			}					\
-			else {					\
-				bits += 8;                      \
-				reg <<= 8;                      \
-			}					\
+                reg &= ~(1<<(8*sizeof(reg)-1)); \
+            }                   \
+            else {                  \
+                bits += 8;                      \
+                reg <<= 8;                      \
+            }                   \
         }                                                       \
 }
 

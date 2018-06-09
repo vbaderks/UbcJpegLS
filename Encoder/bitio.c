@@ -50,13 +50,14 @@
  * David Cheng-Hsiu Chu, and Ismail R. Ismail march 1999
  */
 
+#include "pch.h"
 #include "global.h"
 #include "bitio.h"
 
 extern FILE *in, *out;
 
 byte negbuff[BUFSIZE+4];    /* byte I/O buffer, allowing for 4 "negative"
-			       locations  */
+                   locations  */
 
  /*
  'buff' is defined as 'rawbuff+4' in bitio.h, so that buff[-4]..buff[-1]
@@ -64,56 +65,55 @@ byte negbuff[BUFSIZE+4];    /* byte I/O buffer, allowing for 4 "negative"
  the byte buffer when flushing the input bit buffer .
  */
 
-int fp; 		/* index into byte buffer */
+int fp;         /* index into byte buffer */
 int truebufsize;        /* true size of byte buffer ( <= BUFSIZE) */
 int foundeof;
 
 
 /* BIT I/O variables */
-dword reg;	   /* BIT buffer for input/output */
+dword reg;     /* BIT buffer for input/output */
 int bits;          /* number of bits free in bit buffer (on output) */
-		   /* (number of bits free)-8 in bit buffer (on input)*/
-
+           /* (number of bits free)-8 in bit buffer (on input)*/
 
 
 /****************************************************************************
  *  OUTPUT ROUTINES
  *  note: some routines are implemented as preprocessor macros. See bitio.h.
  ****************************************************************************/
-
-void flushbuff(FILE *fil) {
-	/* fwrite must work correctly, even if fp is equal to 0 */
+void flushbuff(FILE *fil)
+{
+    /* fwrite must work correctly, even if fp is equal to 0 */
     fwrite(buff, 1, fp, fil);
     fp = 0;
 }
 
 
-
 /* Flushes the bit output buffer and the byte output buffer */
-void bitoflush() {
-	register unsigned int outbyte;
-    
+void bitoflush()
+{
+    register unsigned int outbyte;
+
     while (bits < 32) {
-		outbyte = reg >> 24;
+        outbyte = reg >> 24;
         myputc(outbyte, out);
-		if ( outbyte == 0xff ) {
-			bits += 7;
-			reg <<= 7;
-			reg &= ~(1<<(8*sizeof(reg)-1)); /* stuff a 0 at MSB */
-		} else {
-		    bits += 8;
-		    reg <<= 8;
-		}
-	}
-	flushbuff(out);
-	bitoinit();
+        if ( outbyte == 0xff ) {
+            bits += 7;
+            reg <<= 7;
+            reg &= ~(1<<(8*sizeof(reg)-1)); /* stuff a 0 at MSB */
+        } else {
+            bits += 8;
+            reg <<= 8;
+        }
+    }
+    flushbuff(out);
+    bitoinit();
 }
 
 
-
 /* Initializes the bit output routines */
-void bitoinit() {
-	bits = 32;
-	reg = 0;
-	fp = 0;
+void bitoinit()
+{
+    bits = 32;
+    reg = 0;
+    fp = 0;
 }

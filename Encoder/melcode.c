@@ -51,84 +51,84 @@
  * David Cheng-Hsiu Chu, and Ismail R. Ismail march 1999
  */
 
-#include <stdio.h>
+#include "pch.h"
 #include "global.h"
 #include "bitio.h"
+#include <stdio.h>
+#include <assert.h>
 
 
-#define MELCSTATES	32	/* number of melcode states */
+#define MELCSTATES  32  /* number of melcode states */
 
 static J[MELCSTATES] = {
-	0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,5,5,6,6,7,
-	7,8,9,10,11,12,13,14,15 
+    0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,5,5,6,6,7,
+    7,8,9,10,11,12,13,14,15 
 };
 
 static int melcstate[MAX_COMPONENTS],        /* index to the state array */
-		   melclen[MAX_COMPONENTS];          /* contents of the state array location
-												indexed by melcstate: the "expected"
-												run length is 2^melclen, shorter runs are
-												encoded by a 1 followed by the run length
-												in binary representation, wit a fixed length
-												of melclen bits */
+           melclen[MAX_COMPONENTS];          /* contents of the state array location
+                                                indexed by melcstate: the "expected"
+                                                run length is 2^melclen, shorter runs are
+                                                encoded by a 1 followed by the run length
+                                                in binary representation, wit a fixed length
+                                                of melclen bits */
 
 static unsigned long melcorder[MAX_COMPONENTS];  /* 2^ melclen */
 
 
 void init_process_run(int maxrun)    /* maxrun is ignoreed when using MELCODE,
-					 					kept here for function compatibility */				    
+                                        kept here for function compatibility */                 
 {
-	int	n_c;
+    int n_c;
 
-	for (n_c=0;n_c<components;n_c++) {
-	melcstate[n_c] = 0;
-	melclen[n_c] = J[0];
-	melcorder[n_c] = 1<<melclen[n_c];
-	}
+    for (n_c=0;n_c<components;n_c++) {
+    melcstate[n_c] = 0;
+    melclen[n_c] = J[0];
+    melcorder[n_c] = 1<<melclen[n_c];
+    }
 }
 
 
-
-process_run(int runlen, int eoline, int color)
+void process_run(int runlen, int eoline, int color)
 {
-	int hits = 0;
+    int hits = 0;
 
+    while ( (unsigned long) runlen >= melcorder[color] ) {
+        hits ++;
+        runlen -= melcorder[color];
+        if ( melcstate[color] < MELCSTATES ) {
+            melclen[color] = J[++melcstate[color]];
+            melcorder[color] = (1L<<melclen[color]);
+        }
+    }
 
-	while ( runlen >= melcorder[color] ) {
-		hits ++;
-		runlen -= melcorder[color];
-		if ( melcstate[color] < MELCSTATES ) {
-			melclen[color] = J[++melcstate[color]];
-			melcorder[color] = (1L<<melclen[color]);
-		}
-	}
+    /* send the required number of "hit" bits (one per occurrence
+       of a run of length melcorder). This number is never too big:
+       after 31 such "hit" bits, each "hit" would represent a run of 32K
+       pixels.
+    */
+    PUT_ONES(hits);
 
-	/* send the required number of "hit" bits (one per occurrence
-	   of a run of length melcorder). This number is never too big:
-	   after 31 such "hit" bits, each "hit" would represent a run of 32K
-	   pixels.
-	*/
-	PUT_ONES(hits);
+    if ( eoline==EOLINE ) {
+        /* when the run is broken by end-of-line, if there is
+           a non-null remainder, send it as if it were 
+           a max length run */
+        if ( runlen )
+            PUT_ONES(1);
+        return;
+    }
 
-	if ( eoline==EOLINE ) {
-		/* when the run is broken by end-of-line, if there is
-		   a non-null remainder, send it as if it were 
-		   a max length run */
-		if ( runlen )
-			PUT_ONES(1);
-		return;
-	}
+    /* now send the length of the remainder, encoded as a 0 followed
+       by the length in binary representation, to melclen bits */
+    limit_reduce = melclen[color]+1;
+    PUTBITS(runlen,limit_reduce);
 
-	/* now send the length of the remainder, encoded as a 0 followed
-	   by the length in binary representation, to melclen bits */
-	limit_reduce = melclen[color]+1;
-	PUTBITS(runlen,limit_reduce);
-
-	/* adjust melcoder parameters */
-	if ( melcstate[color] ) {
-		melclen[color] = J[--melcstate[color]];
-		melcorder[color] = (1L<<melclen[color]);
-	}
-	return;
+    /* adjust melcoder parameters */
+    if ( melcstate[color] ) {
+        melclen[color] = J[--melcstate[color]];
+        melcorder[color] = (1L<<melclen[color]);
+    }
+    return;
 }
 
 
