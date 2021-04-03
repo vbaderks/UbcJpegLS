@@ -336,7 +336,7 @@ extern int  N[TOT_CONTEXTS],
 void error(char *msg);
 void *safealloc(size_t size);
 void *safecalloc(size_t numels, size_t size);
-int set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p);
+int set_thresholds(int alfa, int NEAR_arg, int *T1p, int *T2p, int *T3p);
 void check_compatibility(jpeg_ls_header *head_frame, jpeg_ls_header *head_scan, int n_s);
 
 /* lossless.c */

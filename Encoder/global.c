@@ -68,7 +68,6 @@ without the written permission of the copyright holder.\n";
 /* I/O files */
 FILE *in, *out;
 FILE *c_in[MAX_COMPONENTS];
-/*FILE *c_out[MAX_COMPONENTS];*/
 FILE *msgfile;
 
 /* Context quantization thresholds  - initially unset */
@@ -147,15 +146,14 @@ double get_utime()
 
 /* Set thresholds to default unless specified by header: */
 
-int set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p)
+int set_thresholds(int alfa, int NEAR_arg, int *T1p, int *T2p, int *T3p)
 {
     int lambda,
         ilambda = 256/alfa,
-        quant = 2*NEAR+1,
         T1 = *T1p, 
         T2 = *T2p, 
         T3 = *T3p;
-    
+
     if (alfa<4096)
         lambda = (alfa+127)/256;
     else
@@ -170,11 +168,11 @@ int set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p)
             if ( T1 < 2 ) T1 = 2;
         }
         /* adjust for lossy */
-        T1 += 3*NEAR;
+        T1 += 3*NEAR_arg;
 
         /* check that the default threshold is in bounds */
-        if ( T1 < NEAR+1 || T1 > (alfa-1) ) 
-             T1 = NEAR+1;         /* eliminates the threshold */
+        if ( T1 < NEAR_arg+1 || T1 > (alfa-1) ) 
+             T1 = NEAR_arg+1;         /* eliminates the threshold */
     }
     if ( T2 <= 0 )  {
         /* compute lossless default */
@@ -185,7 +183,7 @@ int set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p)
             if ( T2 < 3 ) T2 = 3;
         }
         /* adjust for lossy */
-        T2 += 5*NEAR;
+        T2 += 5*NEAR_arg;
 
         /* check that the default threshold is in bounds */
         if ( T2 < T1 || T2 > (alfa-1) ) 
@@ -200,7 +198,7 @@ int set_thresholds(int alfa, int NEAR, int *T1p, int *T2p, int *T3p)
             if ( T3 < 4 ) T3 = 4;
         }
         /* adjust for lossy */
-        T3 += 7*NEAR;
+        T3 += 7*NEAR_arg;
 
         /* check that the default threshold is in bounds */
         if ( T3 < T2 || T3 > (alfa-1) ) 
@@ -304,25 +302,25 @@ void check_compatibility(jpeg_ls_header *head_frame, jpeg_ls_header *head_scan, 
 
 /* for writing disclaimer to command line in DOS */
 
-char *ttyfilename = "CON";
+const char *ttyfilename = "CON";
 
 #define PAUSE   20
 
-fprint_disclaimer(FILE *fp, int nopause)
+void fprint_disclaimer(FILE *fp, int nopause_arg)
 {
     char *p0, *p1;
     FILE *ttyf = NULL;
     int  i, c;
 
-    nopause = nopause | !_isatty(_fileno(fp));
+    nopause_arg = nopause_arg | !_isatty(_fileno(fp));
 
-    if ( !nopause && (ttyf=fopen(ttyfilename,"r"))==NULL ) {
-        nopause = 1;
+    if ( !nopause_arg && (ttyf=fopen(ttyfilename,"r"))==NULL ) {
+        nopause_arg = 1;
     }
 
     for ( i=1, p0=disclaimer; ; i++ ) {
         if ( !(*p0)  ) break;
-        if ( !nopause && i%PAUSE==0 ) {
+        if ( !nopause_arg && i%PAUSE==0 ) {
             fflush(fp);
             fprintf(stderr, "--- (press RETURN to continue) ---"); 
             fflush(stderr);
@@ -335,5 +333,5 @@ fprint_disclaimer(FILE *fp, int nopause)
     }
     fprintf(fp,"\n");
     fflush(fp);
-    if ( !nopause) fclose(ttyf);
+    if ( !nopause_arg) fclose(ttyf);
 }

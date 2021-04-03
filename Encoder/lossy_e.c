@@ -75,7 +75,7 @@ inline void lossy_regular_mode(int Q, int SIGN, int Px, pixel *xp)
     At = A[Q];
     /* Estimate k - Golomb coding variable computation (A.5.1) */    
     {
-        register nst = Nt;
+        int nst = Nt;
         for(k=0; nst < At; nst<<=1, k++);
     }
 
@@ -90,7 +90,7 @@ inline void lossy_regular_mode(int Q, int SIGN, int Px, pixel *xp)
     Rx = Px + SIGN * iqErrval;
 
     clip(Rx, alpha);
-    *xp = Rx;                   /* store reconstructed pixel in scan line */
+    *xp = (pixel) Rx;                   /* store reconstructed pixel in scan line */
 
     /* Modulo reduction of predication error (A.4.5) */
     if ( qErrval < 0 )
@@ -200,7 +200,7 @@ pixel lossy_end_of_run(pixel Ra, pixel Rb, pixel Ix, int RItype)
         Rx = xpr - iqErrval;
 
     clip(Rx,alpha);    /* reconstructed pixel */
-    Ix = Rx;
+    Ix = (pixel) Rx;
 
     /* Estimate k */
     for(k=0; Nt < At; Nt *=2, k++);
@@ -307,7 +307,7 @@ void lossy_doscanline(pixel *psl,          /* previous scanline */
 
             if ( cont == 0 ) {      /* Run state? */
             /*************** RUN STATE ***************************/
-                register delta = Ix - Ra;
+                register int delta = Ix - Ra;
                 RUNcnt = 0;
 
                 if ( delta <= NEAR && delta >= negNEAR )
@@ -426,7 +426,7 @@ void lossy_doscanline(pixel *psl,          /* previous scanline */
             if ( cont == 0 ) {      /* Run state? */
         /*************** RUN STATE ***************************/
 
-                register delta = Ix - Ra;
+                register int delta = Ix - Ra;
                 RUNcnt = 0;
 
                 if ( delta <= NEAR && delta >= negNEAR )

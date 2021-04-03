@@ -91,7 +91,7 @@ inline void lossless_regular_mode(int Q, int SIGN, int Px, pixel *xp)
 
     /* Estimate k - Golomb coding variable computation (A.5.1) */
     {
-        register nst = Nt;
+        int nst = Nt;
         for(k=0; nst < At; nst<<=1, k++);
     }
 /*k=getk[Nt][At];*/

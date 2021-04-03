@@ -72,13 +72,12 @@ void check_range(int param, char *name, int low, int high)
 }
 
 /* reads n bytes (0 <= n <= 4) from the input stream */
-unsigned int read_n_bytes(FILE *in, unsigned int n)
+unsigned int read_n_bytes(FILE *in_arg, unsigned int n)
 {
     unsigned int m = 0;
-    unsigned int i;
 
-    for ( i=0; i<n; i++ )
-        m = (m << 8) | ((unsigned char)getc(in));
+    for ( unsigned int i = 0; i<n; i++ )
+        m = (m << 8) | ((unsigned char)getc(in_arg));
     return m;
 }
 
@@ -127,13 +126,12 @@ int write_marker(FILE *out, int marker)
 /* Write the frame header to the JLS file */
 int write_jpegls_frame(FILE *out, jpeg_ls_header *jp)
 {
-    int i, marker_len,
-    bpp, ct = 0;
+    int bpp, ct = 0;
 
     ct += write_marker(out, SOF_LS);   /* write JPEG-LS frame marker */
 
     check_range(jp->comp, "frame components", 1, 255);
-    marker_len = 8 + 3*jp->comp;
+    const int marker_len = 8 + 3 * jp->comp;
 
     ct += write_n_bytes(out, marker_len, 2); /* write marker length */
 
@@ -152,7 +150,7 @@ int write_jpegls_frame(FILE *out, jpeg_ls_header *jp)
     ct += write_n_bytes(out, jp->comp, 1);
 
     /* now write a triplet of bytes per component */
-    for ( i=0; i<jp->comp; i++ ) {
+    for ( int i = 0; i<jp->comp; i++ ) {
         int sx = jp->samplingx[i], 
             sy = jp->samplingy[i];
 
@@ -167,11 +165,11 @@ int write_jpegls_frame(FILE *out, jpeg_ls_header *jp)
 
 
 /* Write the Scan header to JLS file */
-int write_jpegls_scan(FILE *out, jpeg_ls_header *jp)
+int write_jpegls_scan(FILE *out_arg, jpeg_ls_header *jp)
 {
     int i, marker_len, ct=0;
          
-    ct += write_marker(out, SOS);   /* write JPEG-LS scan marker */
+    ct += write_marker(out_arg, SOS);   /* write JPEG-LS scan marker */
 
     check_range(jp->comp, "scan components", 1, 4);
 
@@ -189,23 +187,23 @@ int write_jpegls_scan(FILE *out, jpeg_ls_header *jp)
 
     marker_len = 6 + 2*jp->comp;
 
-    ct += write_n_bytes(out, marker_len, 2); /* write marker length */
-    ct += write_n_bytes(out, jp->comp, 1);   /* # of components for the scan */
+    ct += write_n_bytes(out_arg, marker_len, 2); /* write marker length */
+    ct += write_n_bytes(out_arg, jp->comp, 1);   /* # of components for the scan */
 
     /* write 2 bytes per component */
     for ( i=0; i<jp->comp; i++ ) {
-        ct += write_n_bytes(out, jp->comp_ids[i], 1); /* component identifier */
-        ct += write_n_bytes(out, 0, 1);   /* no tables in this implementation */
+        ct += write_n_bytes(out_arg, jp->comp_ids[i], 1); /* component identifier */
+        ct += write_n_bytes(out_arg, 0, 1);   /* no tables in this implementation */
     }
 
     check_range(jp->NEAR, "NEAR", 0, 255);
-    ct += write_n_bytes(out, jp->NEAR, 1);
+    ct += write_n_bytes(out_arg, jp->NEAR, 1);
 
     check_range(jp->color_mode,"INTERLEAVE", 0, 2);
-    ct += write_n_bytes(out, jp->color_mode, 1);
+    ct += write_n_bytes(out_arg, jp->color_mode, 1);
 
     check_range(jp->shift, "SHIFT", 0, 15);
-    ct += write_n_bytes(out, jp->shift, 1);
+    ct += write_n_bytes(out_arg, jp->shift, 1);
 
     return ct;
 }

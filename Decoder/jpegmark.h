@@ -83,7 +83,7 @@ int write_n_bytes(FILE *out, int value, int n);
 int write_2_bytes(FILE *out, int value);
 int write_marker(FILE *out, int marker);
 int write_jpegls_frame(FILE *out, jpeg_ls_header *jp);
-int write_jpegls_scan(FILE *out, jpeg_ls_header *jp);
+int write_jpegls_scan(FILE *out_arg, jpeg_ls_header *jp);
 int write_jpegls_extmarker(FILE *out, jpeg_ls_header *jp);
 
 
