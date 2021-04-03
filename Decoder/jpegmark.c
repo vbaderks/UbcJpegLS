@@ -52,7 +52,7 @@
  */
 
 
-#include <stdio.h>
+#include "pch.h"
 #include "global.h"
 #include "jpegmark.h"
 

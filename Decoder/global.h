@@ -51,8 +51,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <time.h>
 
 #ifndef GLOBAL_H
 #define GLOBAL_H

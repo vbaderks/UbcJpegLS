@@ -51,6 +51,7 @@
  * David Cheng-Hsiu Chu, and Ismail R. Ismail march 1999
  */
 
+#include "pch.h"
 #include "global.h"
 #include <string.h>
 #include "jpegmark.h"

@@ -49,9 +49,9 @@
  * David Cheng-Hsiu Chu, and Ismail R. Ismail march 1999
  */
 
+#include "pch.h"
 #include "global.h"
 #include "bitio.h"
-#include <memory.h>
 
 extern int zeroLUT[];     /* lookup table to find number of leading zeroes */
 

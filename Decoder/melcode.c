@@ -51,7 +51,7 @@
  * David Cheng-Hsiu Chu, and Ismail R. Ismail march 1999
  */
 
-#include <stdio.h>
+#include "pch.h"
 #include "global.h"
 #include "bitio.h"
 
